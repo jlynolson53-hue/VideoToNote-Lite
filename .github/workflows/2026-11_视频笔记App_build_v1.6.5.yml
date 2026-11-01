@@ -1466,7 +1466,6 @@ jobs:
               <div id="pvFlow"></div>
               <div class="pvStats"><div><b id="pvReq">0</b><span>已完成请求</span></div><div><b id="pvRun">0</b><span>进行中</span></div><div><b id="pvPct">0%</b><span>总进度</span></div></div>
               <div id="pvNow" class="mute"></div>
-              <div class="lin" id="progLin"><i></i></div>
               <ol id="steps"></ol>
               <div id="progErr"></div>
               <div class="busy" id="busy"></div>
@@ -2806,7 +2805,7 @@ jobs:
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
           const APP_VER = "1.6.5";
           const CHANGELOG = [
-            ["1.6.5", "“保存笔记”与“导出图文 MD”合并为“导出 Markdown”（图片直接嵌入，一个文件即可）；顶栏、菜单、修改笔记按钮、底栏、版本标签改为液态玻璃风格"],
+            ["1.6.5", "“保存笔记”与“导出图文 MD”合并为“导出 Markdown”（图片直接嵌入，一个文件即可）；顶栏、菜单、修改笔记按钮、底栏、版本标签改为液态玻璃风格；去掉与总进度不同步的细进度条"],
             ["1.6.4", "同一页的中间截图（以及被抽稀掉的截图）直接删除，不再占用存储"],
             ["1.6.3", "生成时可暂停/继续；进度可视化（流程节点、请求计数、计时）；界面改为仿 iOS 风格"],
             ["1.6.2", "版本号自动读取安装包；设置页加入更新日志；材料页加入“一键复制反馈”；同一页多张截图只留最干净的第一张（正文）和批注最全的最后一张（其余课堂截图）"],
@@ -2940,7 +2939,7 @@ jobs:
           const _run5 = run;
           run = async function (sub) {
             stepIdx = -1; drawSteps();
-            $("progErr").textContent = ""; $("progLin").style.display = "block";
+            $("progErr").textContent = "";
             $("progCard").style.display = "block"; $("genCard").style.display = "none"; $("logBox").open = false;
             try { await _run5(sub); }
             finally {
@@ -2949,7 +2948,6 @@ jobs:
               if (/^完成/.test(last)) { $("progCard").style.display = "none"; }
               else {
                 const errs = L.querySelectorAll(".e");
-                $("progLin").style.display = "none";
                 $("progErr").textContent = errs.length ? errs[errs.length - 1].textContent : "没有完成，请查看运行日志";
                 $("logBox").open = true;
               }
