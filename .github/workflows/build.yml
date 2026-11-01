@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 16
-                  versionName "1.5.9"
+                  versionCode 17
+                  versionName "1.6.0"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -1360,7 +1360,7 @@ jobs:
               <div class="frow"><textarea id="input" rows="2" placeholder="支持 b23.tv 短链、BV号、完整链接"></textarea>
                 <button class="icon" id="pasteBtn" title="粘贴"><i class="ic" data-fb="粘贴">content_paste</i></button></div>
               <label>分P（留空=自动识别）</label><input id="pnum" type="number" min="1" placeholder="自动" style="max-width:200px">
-              <select id="style" style="display:none"><option value="study">学习笔记</option><option value="brief">简要摘要</option><option value="detail">详细逐段</option></select>
+              <select id="style" style="display:none"><option value="study">教辅模式</option><option value="brief">简要摘要</option><option value="detail">详细逐段</option></select>
               <label>笔记风格</label><div class="chips" id="styleChips"></div>
               <label>选项</label><div class="chips"><button class="chip5" id="chipTs">显示时间戳</button><button class="chip5" id="chipShot">截图笔记</button></div>
               <label class="sw" style="display:none"><span>笔记中显示时间戳<small id="tsTip"></small></span><input type="checkbox" id="tsOn"><i></i></label>
@@ -1603,7 +1603,7 @@ jobs:
             return ch.message.content;
           }
           const STYLE = {
-            study: "写成学习笔记：按内容分成若干小节，每节有小标题、要点列表，重要概念加粗，有例子或公式要保留，最后给“知识点总结”。",
+            study: "写成教辅书风格的讲义（参考高考一轮复习书的版式），严格遵守：①分节——按老师讲课或课件页脚的分块组织，一级标题用“一、二、三”加方法名（如“一、热重分析基础解题思路”），不要按题目平铺分节；每节开头写【思路】，用 (1)(2)(3) 列出该方法的步骤。②例题——沿用课件上的【例N】编号；题干原样照录，保留小问编号和填空横线 ______，真题在括号里注明年份和卷别；课件没写编号时按出现顺序编号。③每道例题固定骨架：【例N】题干 → 【图N】 → 【解析】 → 【答案】；【答案】单独成行并加粗，每个小问都要给出答案，课件和讲解都没给答案时写“视频未给出”。④凡是比较各阶段物质的，用表格（如 M、m、n 三行表，或 ΔM 对比表）。⑤关键结论前加 ★；老师的应试提醒和口诀保留原话。⑥只有老师讲了两种方法时才写两种解法（先写快法，再写完整算法），不要自己补充解法。⑦用讲义口吻（可用“同学们”），不要写“作者强调”“视频中提到”；以连贯段落为主，少用无序列表。⑧最后写“易错点”小节，列出老师提醒过的易错处。⑨禁止编造：课件和字幕都没有的数值、坐标、结论一律不写，图中没标出的点写“图中未标出”。⑩一级标题用视频原标题。",
             brief: "写成简要摘要：先用3-5句话概括全片，再列出最多8条关键要点。",
             detail: "写成详细逐段笔记：按时间顺序逐段整理，尽量保留讲解中的细节、数据和例子。"
           };
@@ -2002,7 +2002,7 @@ jobs:
             log("截图去重后剩 " + res.length + " 张");
             return res;
           }
-          const VPROMPT = "你会看到一节高中网课视频中按时间顺序截取的几张画面，多为 PPT（展示题目）或手写板书（展示解题过程）。请逐张识别，只输出一个 JSON 数组，不要任何其他文字，格式：[{\"n\":编号,\"type\":\"题目\"或\"板书\"或\"图表\"或\"无关\",\"content\":\"识别内容\"}]。规则：题目——完整抄录题干、选项和题图中的已知条件；板书——按书写顺序写出推导步骤；图表——描述图中的物理/化学/生物要素（受力、电路连接、实验装置、结构式、曲线走势等）；只有人像、片头片尾、空白或完全看不清的画面标为“无关”，content 留空。公式一律用 LaTeX，行内用 $...$。看不清的字写“[看不清]”，不要猜。";
+          const VPROMPT = "你会看到一节高中网课视频中按时间顺序截取的几张画面，多为 PPT（展示题目）或手写板书（展示解题过程）。请逐张识别，只输出一个 JSON 数组，不要任何其他文字，格式：[{\"n\":编号,\"type\":\"题目\"或\"板书\"或\"图表\"或\"无关\",\"content\":\"识别内容\"}]。规则：题目——完整抄录题干、选项和题图中的已知条件；板书——按书写顺序写出推导步骤；图表——描述图中的物理/化学/生物要素（受力、电路连接、实验装置、结构式、曲线走势等）；只有人像、片头片尾、空白或完全看不清的画面标为“无关”，content 留空。公式一律用 LaTeX，行内用 $...$。看不清的字写“[看不清]”，不要猜。图中没有标出的数值不要估读，写“未标出”；不要自己推断产物或答案，只抄录画面上真实写着的内容（包括手写批注，注明“手写”）。";
           function parseJsonArr(txt) {
             const t = String(txt || "").replace(/```(?:json)?/gi, "");
             const m = t.match(/\[[\s\S]*\]/);
@@ -2074,7 +2074,7 @@ jobs:
           sysPrompt = function () {
             const p = _sp3();
             if (!FRAME_MODE) return p;
-            return p + "\n\n【关于截图】字幕中“【图N】（类型）内容”的部分，是该时刻视频画面的识别结果（PPT 题目或板书推导），比口头讲解更准确，也算作视频内容。请：1）把题目完整写进笔记，把板书推导整理成清晰的解题步骤；2）公式用 LaTeX（$...$）；3）在笔记中最合适的位置单独起一行，原样写出【图N】，每张图最多出现一次，App 会把它换成截图。";
+            return p + "\n\n【关于截图】字幕中“【图N】（类型）内容”的部分，是该时刻视频画面的识别结果（PPT 题目或板书推导），比口头讲解更准确，也算作视频内容。请：1）把题目完整写进笔记，把板书推导整理成清晰的解题步骤；2）公式用 LaTeX，行内用 $...$，独立公式用 $$...$$；识别结果里的 Unicode 下标（如 CO₂）请改写为 $\\mathrm{CO_2}$；同一页课件被识别多次时只按一次处理；3）在笔记中最合适的位置单独起一行，原样写出【图N】，每张图最多出现一次，App 会把它换成截图。";
           };
           function insertImages(md, frames) {
             const used = new Set();
@@ -2085,7 +2085,7 @@ jobs:
               return "\n\n![图" + n + "](img/" + f.name + ")\n\n";
             });
             const rest = frames.filter(f => !used.has(String(f.n)) && (f.type === "题目" || f.type === "板书"));
-            if (rest.length) md += "\n\n## 其余课堂截图\n\n" + rest.map(f => "![图" + f.n + "（" + f.type + "）](img/" + f.name + ")").join("\n\n");
+            if (rest.length) md += "\n\n## 其余课堂截图\n\n" + rest.map(f => "![图" + f.n + "（" + (f.type === "板书" ? "截图" : f.type) + "）](img/" + f.name + ")").join("\n\n");
             return md.replace(/\n{3,}/g, "\n\n");
           }
           const _render3 = render;
@@ -2141,8 +2141,21 @@ jobs:
           $("goBtn").onclick = () => run(false);
           $("subOnly").onclick = () => run(true);
           // ===== v1.4.1：公式 + 表格 + 过滤无关截图 + AI 输入 + 多轮修改 =====
+          function fixTex(md) {
+            // 先把多行 $$ 块合成一行，避免下面删掉单独的 $$ 行
+            md = String(md || "").replace(/(^|\n)[ \t]*\$\$[ \t]*\n([\s\S]*?)\n[ \t]*\$\$[ \t]*(?=\n|$)/g, (m, a, t) => a + "$$" + t.trim().replace(/\n+/g, " \\\\ ") + "$$");
+            md = md.replace(/(^|\n)\\\[\s*([\s\S]*?)\s*\\\](?=\n|$)/g, (m, a, t) => a + "$$" + t.replace(/\n+/g, " ") + "$$");
+            // 整行裸露的 LaTeX 自动包上 $$
+            return md.split("\n").map(l => {
+              const s = l.trim();
+              if (!s || s.includes("$") || /^(#|\||!|>|```|-|\*|\d+[.、)]|【)/.test(s)) return l;
+              if (!/\\(frac|mathrm|xlongequal|times|approx|text|cdot|qquad|Delta|uparrow|sim|le|ge|Rightarrow)/.test(s)) return l;
+              if (/[\u4e00-\u9fa5]/.test(s.replace(/\\text\{[^}]*\}/g, ""))) return l;
+              return "$$" + s + "$$";
+            }).join("\n");
+          }
           function cleanMd(md) {
-            return String(md || "").split("\n").filter(l => !/^\s*(\${1,2}|\\\\)\s*$/.test(l)).join("\n").replace(/\n{3,}/g, "\n\n");
+            return fixTex(md).split("\n").filter(l => !/^\s*(\${1,2}|\\\\)\s*$/.test(l)).join("\n").replace(/\n{3,}/g, "\n\n");
           }
           function texHtml(tex, disp) {
             try { if (window.katex) return katex.renderToString(tex, { displayMode: disp, throwOnError: false, strict: false }); } catch (e) {}
