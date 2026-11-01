@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 27
-                  versionName "1.7.0"
+                  versionCode 28
+                  versionName "1.7.1"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -1457,7 +1457,8 @@ jobs:
           }
           /* v1.6.9：Framework7 生成页，压掉全局 iOS 覆盖样式 */
           .f7s{background:transparent}
-          .f7s .ios{background:transparent;font-size:17px}
+          .f7s .ios{background:transparent;font-size:17px;--f7-theme-color:#007aff;--f7-theme-color-rgb:0,122,255;--f7-theme-color-shade:#0066d6;--f7-theme-color-tint:#298fff}
+          .f7s .ios.dark{--f7-theme-color:#0a84ff;--f7-theme-color-rgb:10,132,255;--f7-theme-color-shade:#0070e0;--f7-theme-color-tint:#339aff}
           .f7s .list.inset,.f7s .block-strong.inset{margin-left:0!important;margin-right:0!important}
           .f7s .block{padding-left:0!important;padding-right:0!important}
           .f7s .block-title{margin-left:16px!important}
@@ -2847,8 +2848,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.7.0";
+          const APP_VER = "1.7.1";
           const CHANGELOG = [
+            ["1.7.1", "修复 Framework7 生成页仍未生效：改用样式文件里确实存在的变量检测，并手动补上主题色"],
             ["1.7.0", "修复 Framework7 生成页没有生效（样式检测方式在本地文件下被拦截）"],
             ["1.6.9", "试验：生成页改用 Framework7 iOS 样式（分组列表、分段控件、开关、大按钮），其他页面不变"],
             ["1.6.8", "去掉所有毛玻璃模糊：卡片、菜单、按钮、底栏恢复实色；保留自定义背景"],
@@ -3021,8 +3023,8 @@ jobs:
             const link = $("f7css");
             function ok() {
               const p = document.createElement("div"); p.className = "f7s"; p.style.cssText = "position:absolute;visibility:hidden";
-              document.body.appendChild(p);
-              const v = getComputedStyle(p).getPropertyValue("--f7-theme-color").trim();
+              p.innerHTML = '<div class="ios"></div>'; document.body.appendChild(p);
+              const v = getComputedStyle(p.firstChild).getPropertyValue("--f7-line-height").trim();
               p.remove(); return !!v;
             }
             function build() {
