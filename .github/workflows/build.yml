@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 33
-                  versionName "1.7.6"
+                  versionCode 34
+                  versionName "1.7.7"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -1420,6 +1420,32 @@ jobs:
           .hist{border-radius:14px!important;transition:transform .15s}
           .hist:active{transform:scale(.99)}
           .grp button+button{margin-left:8px}
+          /* v1.7.7：UI 动效（克制，无模糊） */
+          :root{--ease-spring:cubic-bezier(.34,1.56,.64,1);--ease-out:cubic-bezier(.22,1,.36,1)}
+          @keyframes vIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+          @keyframes vPop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+          @keyframes vPulse{0%,100%{box-shadow:0 0 0 0 rgba(10,132,255,.45)}50%{box-shadow:0 0 0 7px rgba(10,132,255,0)}}
+          @keyframes vFlash{0%{box-shadow:0 0 0 0 rgba(10,132,255,.6)}100%{box-shadow:0 0 0 10px rgba(10,132,255,0)}}
+          .page.on{animation:vIn .32s var(--ease-out) both}
+          .page.on .grp,.page.on .card,.page.on .hist{animation:vIn .38s var(--ease-out) both}
+          .page.on>*:nth-child(2){animation-delay:.03s}.page.on>*:nth-child(3){animation-delay:.06s}
+          .page.on>*:nth-child(4){animation-delay:.09s}.page.on>*:nth-child(5){animation-delay:.12s}
+          .hist:nth-child(2){animation-delay:.04s}.hist:nth-child(3){animation-delay:.08s}.hist:nth-child(4){animation-delay:.12s}.hist:nth-child(n+5){animation-delay:.16s}
+          button,.chip5,.chip,.fab,.big{transition:transform .28s var(--ease-spring),background-color .2s,color .2s,box-shadow .2s,opacity .2s}
+          button:active,.chip5:active,.chip:active,.fab:active{transform:scale(.95);transition-duration:.08s}
+          .big:active{transform:scale(.97)}
+          details>*:not(summary){animation:vIn .25s var(--ease-out)}
+          summary{transition:color .2s}
+          #progCard:not([hidden]){animation:vPop .35s var(--ease-spring)}
+          #pvFlow .on,#pvFlow .cur,#pvFlow .act,.steps .on{animation:vPulse 1.6s ease-in-out infinite}
+          #pvPct,#pvReq,#pvRun{transition:color .3s}
+          #snack{transition:transform .32s var(--ease-spring),opacity .2s!important}
+          #snack:not(.show){transform:translate(-50%,24px)}
+          .menu.show,.sheet.show,#dlg.show,.pop.show{animation:vPop .22s var(--ease-out)}
+          #scrim{transition:opacity .2s}
+          .nav a,.nav button,.nav .it{transition:background-color .25s,color .25s,transform .28s var(--ease-spring)}
+          #input.vflash{animation:vFlash .7s ease-out}
+          @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
           </style>
           </head>
           <body>
@@ -2792,8 +2818,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.7.6";
+          const APP_VER = "1.7.7";
           const CHANGELOG = [
+            ["1.7.7", "增加界面动效：页面与卡片依次淡入、按钮按下回弹、进度当前步骤脉冲、提示条滑入、弹出菜单缩放；系统开启“减少动画”时自动关闭"],
             ["1.7.6", "应用图标换成蓝色笔记页；界面细调：标签贴近输入框、分组间距加大、主按钮更突出、数字等宽、列表卡片更清爽"],
             ["1.7.5", "打开或切回 App 时，剪贴板里有 B 站链接会自动粘贴（链接框为空时才粘贴，同一条只粘一次，可在设置里关闭）"],
             ["1.7.4", "更换应用图标：绿色“笔”字加播放键"],
@@ -2975,6 +3002,7 @@ jobs:
               if (localStorage.getItem("vtn_lastclip") === t) return;
               localStorage.setItem("vtn_lastclip", t);
               box.value = t; box.dispatchEvent(new Event("input"));
+              box.classList.remove("vflash"); void box.offsetWidth; box.classList.add("vflash");
               (typeof snack === "function" ? snack : alert)("已自动粘贴剪贴板里的 B 站链接");
             }
             setTimeout(autoClip, 700);
