@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 20
-                  versionName "1.6.3"
+                  versionCode 21
+                  versionName "1.6.4"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -839,6 +839,13 @@ jobs:
                       String t = sharedText;
                       sharedText = "";
                       return t;
+                  }
+
+                  @JavascriptInterface
+                  public boolean imgDel(String name) {
+                      if (name == null || name.contains("/") || name.contains("..")) return false;
+                      File f = new File(new File(getFilesDir(), "img"), name);
+                      return f.exists() && f.delete();
                   }
 
                   @JavascriptInterface
@@ -2060,14 +2067,18 @@ jobs:
             log("准备截图 " + times.length + " 处（视频越长越慢，请耐心等）…");
             const url = await videoUrl(v.bvid, v.cid);
             const r = await ncall("grabFrames", url, JSON.stringify(times), v.bvid + "_p" + v.p + "_" + (Date.now() % 1000000));
-            const kept = [];
+            const kept = []; let delCnt = 0;
             for (const f of (r.frames || [])) {
               const last = kept[kept.length - 1];
-              if (last && thumbDiff(last.thumb, f.thumb) < 3.5) kept[kept.length - 1] = Object.assign({}, f, { t: last.t, clean: last.clean || last.name, cnt: (last.cnt || 1) + 1 });
+              if (last && thumbDiff(last.thumb, f.thumb) < 3.5) {
+                if (last.clean && last.name !== last.clean) { try { if (HAS_NATIVE && Native.imgDel) Native.imgDel(last.name); } catch (e) {} delCnt++; }
+                kept[kept.length - 1] = Object.assign({}, f, { t: last.t, clean: last.clean || last.name, cnt: (last.cnt || 1) + 1 });
+              }
               else kept.push(f);
             }
             const res = thin(kept, 30);
-            log("截图去重后剩 " + res.length + " 张");
+            if (HAS_NATIVE && Native.imgDel) kept.filter(k => !res.includes(k)).forEach(k => { try { Native.imgDel(k.name); if (k.clean) Native.imgDel(k.clean); } catch (e) {} delCnt++; });
+            log("截图去重后剩 " + res.length + " 张" + (delCnt ? "，已删除 " + delCnt + " 张同页中间截图" : ""));
             return res;
           }
           const VPROMPT = "你会看到一节高中网课视频中按时间顺序截取的几张画面，多为 PPT（展示题目）或手写板书（展示解题过程）。请逐张识别，只输出一个 JSON 数组，不要任何其他文字，格式：[{\"n\":编号,\"type\":\"题目\"或\"板书\"或\"图表\"或\"无关\",\"content\":\"识别内容\"}]。规则：题目——完整抄录题干、选项和题图中的已知条件；板书——按书写顺序写出推导步骤；图表——描述图中的物理/化学/生物要素（受力、电路连接、实验装置、结构式、曲线走势等）；只有人像、片头片尾、空白或完全看不清的画面标为“无关”，content 留空。公式一律用 LaTeX，行内用 $...$。看不清的字写“[看不清]”，不要猜。图中没有标出的数值不要估读，写“未标出”；不要自己推断产物或答案，只抄录画面上真实写着的内容（包括手写批注，注明“手写”）。";
@@ -2780,8 +2791,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.6.3";
+          const APP_VER = "1.6.4";
           const CHANGELOG = [
+            ["1.6.4", "同一页的中间截图（以及被抽稀掉的截图）直接删除，不再占用存储"],
             ["1.6.3", "生成时可暂停/继续；进度可视化（流程节点、请求计数、计时）；界面改为仿 iOS 风格"],
             ["1.6.2", "版本号自动读取安装包；设置页加入更新日志；材料页加入“一键复制反馈”；同一页多张截图只留最干净的第一张（正文）和批注最全的最后一张（其余课堂截图）"],
             ["1.6.1", "教辅模式规则改为各科通用：内容提要、类型、方法、例题、解析、答案、反思、变式、总结、强化训练"],
