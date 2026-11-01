@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 18
-                  versionName "1.6.1"
+                  versionCode 19
+                  versionName "1.6.2"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -842,6 +842,11 @@ jobs:
                   }
 
                   @JavascriptInterface
+                  public String appVersion() {
+                      try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception e) { return ""; }
+                  }
+
+                  @JavascriptInterface
                   public String paste() {
                       final String[] out = {""};
                       final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
@@ -1421,7 +1426,7 @@ jobs:
               <label>主题色</label><div class="chips" id="seedChips"></div>
             </div>
             <div class="gt">关于</div>
-            <div class="grp"><div class="li"><span>版本</span><span class="mute">1.5.8</span></div><div class="mute">视频笔记 · Material 3 界面</div></div>
+            <div class="grp"><div class="li"><span>版本</span><span class="mute" id="verTxt">1.6.2</span></div><div class="mute">视频笔记 · Material 3 界面</div><details id="chgBox" style="margin-top:8px"><summary><b>更新日志</b></summary><div id="chgList" class="mute"></div></details></div>
           </div></div>
 
           <div id="pg-det">
@@ -1995,7 +2000,7 @@ jobs:
             const kept = [];
             for (const f of (r.frames || [])) {
               const last = kept[kept.length - 1];
-              if (last && thumbDiff(last.thumb, f.thumb) < 3.5) kept[kept.length - 1] = Object.assign({}, f, { t: last.t });
+              if (last && thumbDiff(last.thumb, f.thumb) < 3.5) kept[kept.length - 1] = Object.assign({}, f, { t: last.t, clean: last.clean || last.name, cnt: (last.cnt || 1) + 1 });
               else kept.push(f);
             }
             const res = thin(kept, 30);
@@ -2082,10 +2087,10 @@ jobs:
               const f = frames.find(x => String(x.n) === n);
               if (!f || used.has(n)) return "";
               used.add(n);
-              return "\n\n![图" + n + "](img/" + f.name + ")\n\n";
+              return "\n\n![图" + n + "](img/" + (f.clean || f.name) + ")\n\n";
             });
-            const rest = frames.filter(f => !used.has(String(f.n)) && (f.type === "题目" || f.type === "板书"));
-            if (rest.length) md += "\n\n## 其余课堂截图\n\n" + rest.map(f => "![图" + f.n + "（" + (f.type === "板书" ? "截图" : f.type) + "）](img/" + f.name + ")").join("\n\n");
+            const rest = frames.filter(f => (!used.has(String(f.n)) || f.clean) && (f.type === "题目" || f.type === "板书" || f.type === "图表"));
+            if (rest.length) md += "\n\n## 其余课堂截图\n\n" + rest.map(f => "![图" + f.n + (f.clean && used.has(String(f.n)) ? "（批注最全）" : "（" + (f.type === "板书" ? "截图" : f.type) + "）") + "](img/" + f.name + ")").join("\n\n");
             return md.replace(/\n{3,}/g, "\n\n");
           }
           const _render3 = render;
@@ -2457,7 +2462,7 @@ jobs:
             if (!MAT) return;
             const dir = HAS_NATIVE ? Native.filesDir() : "";
             const pre = s => "<pre>" + esc(String(s || "（无）")) + "</pre>";
-            let h = '<div class="v4top"><b>本次提供给 AI 的材料</b><button id="v4close">返回</button></div>';
+            let h = '<div class="v4top"><b>本次提供给 AI 的材料</b><button id="v4fb">一键复制反馈</button><button id="v4close">返回</button></div>';
             h += "<h3>基本信息</h3>" + pre("标题：" + MAT.title + "\n来源：" + MAT.bvid + " P" + MAT.p + "\n文字稿：" + (MAT.asr ? "语音识别" : "B站字幕") + "，" + MAT.segs.length + " 段\n截图：" + MAT.frames.length + " 张\n笔记风格：" + MAT.style + "\n时间戳：" + (MAT.ts ? "开" : "关"));
             h += "<h3>我的要求</h3>" + pre(MAT.req);
             h += "<h3>各版本的修改意见</h3>" + pre(MAT.vers.map((x, i) => "第 " + (i + 1) + " 版：" + x.note).join("\n\n"));
@@ -2473,6 +2478,7 @@ jobs:
             h += "</details>";
             const pg = $("v4page"); pg.innerHTML = h; pg.style.display = "block"; pg.scrollTop = 0;
             $("v4close").onclick = () => { pg.style.display = "none"; };
+            $("v4fb").onclick = () => copyFeedback();
           };
           $("v4go").onclick = async () => {
             if (!MAT || !current) return;
@@ -2710,6 +2716,44 @@ jobs:
               else snack("剪贴板是空的，先去B站复制链接");
             };
           })();
+          // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
+          const APP_VER = "1.6.2";
+          const CHANGELOG = [
+            ["1.6.2", "版本号自动读取安装包；设置页加入更新日志；材料页加入“一键复制反馈”；同一页多张截图只留最干净的第一张（正文）和批注最全的最后一张（其余课堂截图）"],
+            ["1.6.1", "教辅模式规则改为各科通用：内容提要、类型、方法、例题、解析、答案、反思、变式、总结、强化训练"],
+            ["1.6.0", "“学习笔记”改为“教辅模式”；修复公式 $$ 被删导致显示源码；识图不再估读未标出的数值"],
+            ["1.5.9", "粘贴键改为原生读取剪贴板，点一下直接粘贴"],
+            ["1.5.8", "识图结果解析更稳；硅基流动余额改为提示去官网查看"],
+            ["1.5.7", "修复“继续生成”按钮不出现；识图模型自动切换"],
+            ["1.5.6", "硅基流动识图；识图失败时保留全部截图"],
+            ["1.5.5", "断点续跑：出错后可继续生成"],
+            ["1.5.4", "后台运行不中断；“我的要求”加启用开关"]
+          ];
+          (function () {
+            let v = APP_VER; try { if (HAS_NATIVE && Native.appVersion) v = Native.appVersion() || v; } catch (e) {}
+            const vt = $("verTxt"); if (vt) vt.textContent = v;
+            const cl = $("chgList"); if (cl) cl.innerHTML = CHANGELOG.map(x => "<p><b>" + x[0] + "</b>　" + esc(x[1]) + "</p>").join("");
+          })();
+          function feedbackText() {
+            if (!MAT) return "";
+            const L = [];
+            let v = APP_VER; try { if (HAS_NATIVE && Native.appVersion) v = Native.appVersion() || v; } catch (e) {}
+            L.push("【视频笔记反馈包】App 版本 " + v);
+            L.push("标题：" + MAT.title + "\n来源：https://www.bilibili.com/video/" + MAT.bvid + "?p=" + MAT.p + "\n文字稿：" + (MAT.asr ? "语音识别" : "B站字幕") + "，" + MAT.segs.length + " 段\n截图：" + MAT.frames.length + " 张\n笔记风格：" + MAT.style + "\n时间戳：" + (MAT.ts ? "开" : "关"));
+            L.push("===== 我的要求 =====\n" + (MAT.req || "（无）"));
+            L.push("===== 各版本修改意见 =====\n" + ((MAT.vers || []).map((x, i) => "第" + (i + 1) + "版：" + (x.note || "")).join("\n") || "（无）"));
+            L.push("===== System Prompt =====\n" + (MAT.sys || ""));
+            L.push("===== 截图识图结果 =====\n" + MAT.frames.map(f => "图" + f.n + " · " + f.type + " · " + Math.floor(f.t / 60) + ":" + String(Math.floor(f.t % 60)).padStart(2, "0") + (f.clean ? "（同页共 " + (f.cnt || 2) + " 张，正文用首张）" : "") + "\n" + (f.content || "")).join("\n\n"));
+            L.push("===== 实际发送的请求记录（" + (MAT.calls || []).length + " 次）=====\n" + (MAT.calls || []).map((c, i) => "--- 第" + (i + 1) + "次 ---\n" + c.map(m => "[" + m.role + "]\n" + m.content).join("\n")).join("\n\n"));
+            L.push("===== 运行日志 =====\n" + (($("log") && $("log").innerText) || "（本次打开 App 后没有日志）"));
+            L.push("===== 最终笔记 =====\n" + (current ? curMd() : ""));
+            return L.join("\n\n");
+          }
+          function copyFeedback() {
+            const t = feedbackText(); if (!t) { snack("这条笔记没有保存材料"); return; }
+            if (HAS_NATIVE) Native.copy(t); else { try { navigator.clipboard.writeText(t); } catch (e) {} }
+            snack("已复制反馈包（" + Math.round(t.length / 1000) + " 千字），粘贴发给我即可");
+          }
           // ---- 设置页：把截图卡片搬进分组、Key 显示/隐藏 ----
           (function () {
             const c = $("shotOn"); if (!c) return;
