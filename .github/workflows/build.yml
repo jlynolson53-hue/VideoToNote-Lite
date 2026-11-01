@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 23
-                  versionName "1.6.6"
+                  versionCode 24
+                  versionName "1.6.7"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -507,6 +507,18 @@ jobs:
               private WebView web;
               private static final String HOME = "file:///android_asset/index.html";
               private String sharedText = "";
+              private android.webkit.ValueCallback<Uri[]> fileCb;
+
+              @Override
+              protected void onActivityResult(int req, int res, Intent data) {
+                  super.onActivityResult(req, res, data);
+                  if (req == 7301 && fileCb != null) {
+                      Uri[] r = null;
+                      if (res == RESULT_OK && data != null && data.getData() != null) r = new Uri[]{ data.getData() };
+                      fileCb.onReceiveValue(r);
+                      fileCb = null;
+                  }
+              }
 
               public static class KeepService extends android.app.Service {
                   private android.os.PowerManager.WakeLock wl;
@@ -564,7 +576,19 @@ jobs:
                           return true;
                       }
                   });
-                  web.setWebChromeClient(new WebChromeClient());
+                  web.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public boolean onShowFileChooser(WebView v, android.webkit.ValueCallback<Uri[]> cb, WebChromeClient.FileChooserParams p) {
+                          if (fileCb != null) fileCb.onReceiveValue(null);
+                          fileCb = cb;
+                          Intent it = new Intent(Intent.ACTION_GET_CONTENT);
+                          it.addCategory(Intent.CATEGORY_OPENABLE);
+                          it.setType("image/*");
+                          try { startActivityForResult(Intent.createChooser(it, "选择背景图片"), 7301); }
+                          catch (Exception e) { fileCb = null; return false; }
+                          return true;
+                      }
+                  });
                   web.addJavascriptInterface(new Bridge(), "Native");
                   readShare(getIntent());
                   web.loadUrl(HOME);
@@ -1431,12 +1455,18 @@ jobs:
           .vchips button.on{background:linear-gradient(180deg,rgba(0,122,255,.72),rgba(0,98,220,.85))!important;color:#fff!important}
           #pg-det>header,#pg-det .hdr,#pg-det [class*=head]{background:var(--glass)!important;-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border-bottom:.5px solid var(--glass-bd)!important}
           #pg-det .card{border-radius:20px!important;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05)!important}
-          /* v1.6.6 液态玻璃加强 */
-          body{background:radial-gradient(900px 600px at 10% 0%,rgba(120,160,255,.28),transparent 60%),radial-gradient(800px 600px at 95% 30%,rgba(190,140,255,.22),transparent 60%),radial-gradient(900px 700px at 40% 100%,rgba(90,200,250,.20),transparent 60%),var(--background)!important;background-attachment:fixed!important}
-          .card,.grp,details.card{background:linear-gradient(180deg,var(--glass-hl),var(--glass))!important;-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:.5px solid var(--glass-bd)!important;border-radius:22px!important;box-shadow:inset 0 1px 0 var(--glass-hl),0 8px 28px rgba(40,60,120,.08)!important}
-          .pvStats>div{background:rgba(255,255,255,.35)!important;border:.5px solid var(--glass-bd);border-radius:16px!important;box-shadow:inset 0 1px 0 var(--glass-hl)}
-          :root[data-theme=dark] .pvStats>div{background:rgba(255,255,255,.06)!important}
-          #preview{background:transparent}
+          /* v1.6.7：默认纯色；自定义背景时卡片变玻璃；侧边栏融入背景 */
+          html.has-bg body{background:transparent!important}
+          #bgLayer{position:fixed;inset:0;z-index:-1;background:center/cover no-repeat;display:none}
+          html.has-bg #bgLayer{display:block}
+          html.has-bg .card,html.has-bg .grp,html.has-bg details.card{background:linear-gradient(180deg,var(--glass-hl),var(--glass))!important;-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:.5px solid var(--glass-bd)!important;border-radius:22px!important;box-shadow:inset 0 1px 0 var(--glass-hl),0 8px 28px rgba(0,0,0,.08)!important}
+          .pvStats>div{border-radius:16px!important}
+          html.has-bg .pvStats>div{background:rgba(255,255,255,.35)!important}
+          @media (min-width:841px){
+            .nav{background:var(--background)!important;border:none!important;box-shadow:none!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+            html.has-bg .nav{background:transparent!important}
+            .nav button.on .pill{background:var(--fill)!important;border-radius:14px!important}
+          }
           </style>
           </head>
           <body>
@@ -2809,8 +2839,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.6.6";
+          const APP_VER = "1.6.7";
           const CHANGELOG = [
+            ["1.6.7", "默认背景改回纯色；设置页可上传自定义背景图；侧边栏去掉分割线、与页面背景融为一体"],
             ["1.6.6", "链接框为空时点生成直接提示，不再弹出错误进度；出错信息不再被误判为进度阶段；液态玻璃加强：渐变背景、半透明卡片"],
             ["1.6.5", "“保存笔记”与“导出图文 MD”合并为“导出 Markdown”（图片直接嵌入，一个文件即可）；顶栏、菜单、修改笔记按钮、底栏、版本标签改为液态玻璃风格；去掉与总进度不同步的细进度条"],
             ["1.6.4", "同一页的中间截图（以及被抽稀掉的截图）直接删除，不再占用存储"],
@@ -2974,6 +3005,48 @@ jobs:
           $("goBtn").onclick = () => run(false);
           $("subOnly").onclick = () => run(true);
           setTimeout(showResume, 300);
+          // v1.6.7：自定义背景（vtn_bg）
+          (function () {
+            const L = document.createElement("div"); L.id = "bgLayer"; document.body.prepend(L);
+            function apply() {
+              let u = ""; try { u = localStorage.getItem("vtn_bg") || ""; } catch (e) {}
+              L.style.backgroundImage = u ? "url(" + u + ")" : "";
+              document.documentElement.classList.toggle("has-bg", !!u);
+              const t = $("bgTip"); if (t) t.textContent = u ? "已使用自定义背景" : "当前：纯色背景";
+            }
+            const about = $("verTxt") && $("verTxt").closest(".grp");
+            if (about) {
+              const gt = document.createElement("div"); gt.className = "gt"; gt.textContent = "背景";
+              const box = document.createElement("div"); box.className = "grp";
+              box.innerHTML = '<div class="li" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0"><span id="bgTip" class="mute" style="flex:1"></span>' +
+                '<button class="sec" id="bgPick">选择图片</button><button class="sec" id="bgClear">恢复纯色</button>' +
+                '<input type="file" id="bgFile" accept="image/*" style="display:none"></div>';
+              const ref = about.previousElementSibling && about.previousElementSibling.classList.contains("gt") ? about.previousElementSibling : about;
+              ref.before(gt, box);
+              $("bgPick").onclick = () => $("bgFile").click();
+              $("bgClear").onclick = () => { try { localStorage.removeItem("vtn_bg"); } catch (e) {} apply(); };
+              $("bgFile").onchange = () => {
+                const f = $("bgFile").files[0]; $("bgFile").value = ""; if (!f) return;
+                const rd = new FileReader();
+                rd.onload = () => {
+                  const im = new Image();
+                  im.onload = () => {
+                    const m = 1600, r = Math.min(1, m / Math.max(im.width, im.height));
+                    const c = document.createElement("canvas"); c.width = Math.round(im.width * r); c.height = Math.round(im.height * r);
+                    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+                    let q = 0.82, u = c.toDataURL("image/jpeg", q);
+                    while (u.length > 1500000 && q > 0.4) { q -= 0.1; u = c.toDataURL("image/jpeg", q); }
+                    try { localStorage.setItem("vtn_bg", u); apply(); }
+                    catch (e) { alert("图片太大，存不下，请换一张小一点的"); }
+                  };
+                  im.onerror = () => alert("这张图片读不出来，换一张试试");
+                  im.src = rd.result;
+                };
+                rd.readAsDataURL(f);
+              };
+            }
+            apply();
+          })();
           // v1.6.6：链接框为空时直接提示，不进入生成流程
           (function () {
             const guard = sub => () => {
