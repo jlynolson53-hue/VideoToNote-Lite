@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 31
-                  versionName "1.7.4"
+                  versionCode 32
+                  versionName "1.7.5"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -3034,8 +3034,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.7.4";
+          const APP_VER = "1.7.5";
           const CHANGELOG = [
+            ["1.7.5", "打开或切回 App 时，剪贴板里有 B 站链接会自动粘贴（链接框为空时才粘贴，同一条只粘一次，可在设置里关闭）"],
             ["1.7.4", "更换应用图标：绿色“笔”字加播放键"],
             ["1.7.3", "放弃 Framework7 试验，生成页恢复为 1.6.8 的界面（1.6.9–1.7.2 的改动全部撤回）"],
             ["1.6.8", "去掉所有毛玻璃模糊：卡片、菜单、按钮、底栏恢复实色；保留自定义背景"],
@@ -3203,6 +3204,34 @@ jobs:
           $("goBtn").onclick = () => run(false);
           $("subOnly").onclick = () => run(true);
           setTimeout(showResume, 300);
+          // v1.7.5：剪贴板有 B 站链接时自动粘贴
+          (function () {
+            const RE = /(b23\.tv\/\w+|bilibili\.com\/video\/|\bBV[0-9A-Za-z]{10}\b|\bav\d{3,}\b)/i;
+            const on = () => localStorage.getItem("vtn_autoclip") !== "0";
+            function autoClip() {
+              if (!on() || window.__busy || !HAS_NATIVE || !Native.paste) return;
+              const box = $("input"); if (!box || box.value.trim()) return;
+              let t = ""; try { t = (Native.paste() || "").trim(); } catch (e) { return; }
+              if (!t || !RE.test(t)) return;
+              if (localStorage.getItem("vtn_lastclip") === t) return;
+              localStorage.setItem("vtn_lastclip", t);
+              box.value = t; box.dispatchEvent(new Event("input"));
+              (typeof snack === "function" ? snack : alert)("已自动粘贴剪贴板里的 B 站链接");
+            }
+            setTimeout(autoClip, 700);
+            document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(autoClip, 400); });
+            window.addEventListener("focus", () => setTimeout(autoClip, 400));
+            const about = $("verTxt") && $("verTxt").closest(".grp");
+            if (about) {
+              const gt = document.createElement("div"); gt.className = "gt"; gt.textContent = "便捷";
+              const g = document.createElement("div"); g.className = "grp";
+              g.innerHTML = '<label class="sw" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0"><span style="color:var(--on-surface);font-size:17px">自动粘贴剪贴板里的 B 站链接</span><input type="checkbox" id="autoClipSw"><i></i></label>';
+              const ref = about.previousElementSibling && about.previousElementSibling.classList.contains("gt") ? about.previousElementSibling : about;
+              ref.before(gt, g);
+              const sw = $("autoClipSw"); sw.checked = on();
+              sw.onchange = () => localStorage.setItem("vtn_autoclip", sw.checked ? "1" : "0");
+            }
+          })();
           // v1.6.7：自定义背景（vtn_bg）
           (function () {
             const L = document.createElement("div"); L.id = "bgLayer"; document.body.prepend(L);
