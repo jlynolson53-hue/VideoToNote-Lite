@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 19
-                  versionName "1.6.2"
+                  versionCode 20
+                  versionName "1.6.3"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -1354,6 +1354,66 @@ jobs:
           </script>
           <link rel="stylesheet" href="katex/katex.min.css">
           <script src="katex/katex.min.js"></script>
+          <style id="iosCss">
+          :root{--primary:#007AFF;--on-primary:#fff;--primary-container:#E5F0FF;--on-primary-container:#003a80;--secondary-container:#E5F0FF;--on-secondary-container:#003a80;--background:#F2F2F7;--surface:#fff;--surface-container-low:#fff;--surface-container:#fff;--surface-container-high:#E9E9EB;--on-surface:#000;--on-surface-variant:#8E8E93;--outline:#C6C6C8;--outline-variant:rgba(60,60,67,.18);--fill:rgba(118,118,128,.12);--sep:rgba(60,60,67,.29);--green:#34C759}
+          :root[data-theme=dark]{--primary:#0A84FF;--on-primary:#fff;--primary-container:#0A2A4D;--on-primary-container:#cfe4ff;--secondary-container:#0A2A4D;--on-secondary-container:#cfe4ff;--background:#000;--surface:#1C1C1E;--surface-container-low:#1C1C1E;--surface-container:#1C1C1E;--surface-container-high:#2C2C2E;--on-surface:#fff;--on-surface-variant:#8E8E93;--outline:#38383A;--outline-variant:rgba(84,84,88,.6);--fill:rgba(118,118,128,.24);--sep:rgba(84,84,88,.65);--green:#30D158}
+          html,body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue","Noto Sans CJK SC",sans-serif!important;-webkit-font-smoothing:antialiased}
+          body{background:var(--background)!important}
+          h1.hd{font-size:34px!important;font-weight:700!important;margin:8px 4px 14px!important}
+          h2{font-size:20px!important;font-weight:600!important}
+          .card,.grp,details.card{background:var(--surface)!important;border:none!important;border-radius:12px!important;box-shadow:none!important}
+          .gt{font-size:13px!important;color:var(--on-surface-variant)!important;font-weight:400!important;margin:22px 16px 6px!important}
+          .li{border-bottom:.5px solid var(--sep);min-height:44px}.li:last-child{border-bottom:none}
+          label{color:var(--on-surface-variant)!important;font-size:13px!important}
+          input,textarea,select{background:var(--fill)!important;border:none!important;border-radius:10px!important;font-size:17px!important;color:var(--on-surface)!important}
+          input:focus,textarea:focus,select:focus{outline:none!important;box-shadow:0 0 0 3px rgba(0,122,255,.25)!important}
+          button{border-radius:12px!important;font-weight:600!important;box-shadow:none!important;transition:opacity .15s,transform .15s}
+          button:active{opacity:.6;transform:scale(.98)}
+          button.big{background:var(--primary)!important;color:#fff!important;min-height:50px;font-size:17px!important}
+          button.sec,button.ghost{background:var(--fill)!important;color:var(--primary)!important;border:none!important}
+          button.text{background:none!important;color:var(--primary)!important}
+          button.icon{border-radius:50%!important;color:var(--primary)!important;background:none!important}
+          .chip5,.pills button{border-radius:999px!important;border:none!important;background:var(--fill)!important;color:var(--on-surface)!important;font-weight:500!important}
+          .chip5.on,.pills button.on{background:var(--primary)!important;color:#fff!important}
+          .chip5.on::before{display:none!important}
+          .seg{background:var(--fill)!important;border:none!important;border-radius:9px!important;padding:2px!important}
+          .seg button{border:none!important;border-radius:7px!important;background:none!important;color:var(--on-surface)!important;font-weight:500!important}
+          .seg button.on{background:var(--surface)!important;box-shadow:0 3px 8px rgba(0,0,0,.12)!important}
+          :root[data-theme=dark] .seg button.on{background:#636366!important}
+          .sw i{width:51px!important;height:31px!important;border-radius:16px!important;background:var(--fill)!important;border:none!important}
+          .sw i::after{width:27px!important;height:27px!important;top:2px!important;left:2px!important;background:#fff!important;border-radius:50%!important;box-shadow:0 3px 8px rgba(0,0,0,.15)!important;transform:none!important;transition:left .25s!important}
+          .sw input:checked+i{background:var(--green)!important}
+          .sw input:checked+i::after{left:22px!important}
+          .nav{background:rgba(242,242,247,.8)!important;-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-right:.5px solid var(--sep)!important;box-shadow:none!important}
+          :root[data-theme=dark] .nav{background:rgba(28,28,30,.8)!important}
+          .nav button{color:var(--on-surface-variant)!important;font-weight:500!important}
+          .nav button.on{color:var(--primary)!important}
+          .nav .pill,.nav button.on .pill{background:none!important}
+          .appbar{background:rgba(242,242,247,.85)!important;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:.5px solid var(--sep)}
+          :root[data-theme=dark] .appbar{background:rgba(28,28,30,.85)!important}
+          .rpl{display:none!important}
+          .fab{border-radius:999px!important;background:var(--primary)!important;color:#fff!important;box-shadow:0 8px 24px rgba(0,122,255,.3)!important}
+          #snack{border-radius:14px!important}
+          .pvTop{display:flex;align-items:center;gap:10px}.pvTop h2{flex:1;margin:0}
+          #pvPause{min-width:76px;padding:6px 14px}
+          #pvPause.paused{background:var(--green)!important;color:#fff!important}
+          #pvFlow{display:flex;align-items:flex-start;margin:18px 0 10px}
+          .pvS{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;font-size:12px;color:var(--on-surface-variant)}
+          .pvS::before{content:"";position:absolute;top:13px;left:-50%;width:100%;height:3px;background:var(--fill)}
+          .pvS:first-child::before{display:none}
+          .pvS.done::before,.pvS.cur::before{background:var(--primary)}
+          .pvS i{width:28px;height:28px;border-radius:50%;background:var(--surface-container-high);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:600;z-index:1;margin-bottom:6px;transition:all .3s}
+          .pvS.done i{background:var(--primary);color:#fff}
+          .pvS.cur i{background:var(--surface);color:var(--primary);box-shadow:0 0 0 3px var(--primary);animation:pvp 1.4s infinite}
+          .pvS.cur{color:var(--primary);font-weight:600}
+          .paused .pvS.cur i{animation:none;box-shadow:0 0 0 3px #FF9500;color:#FF9500}
+          @keyframes pvp{50%{box-shadow:0 0 0 7px rgba(0,122,255,.2)}}
+          .pvStats{display:flex;gap:10px;margin:8px 0}
+          .pvStats div{flex:1;background:var(--fill);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column}
+          .pvStats b{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+          .pvStats span{font-size:12px;color:var(--on-surface-variant)}
+          #pvNow{font-size:13px;min-height:18px;margin:4px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+          </style>
           </head>
           <body>
           <span id="themeChip" hidden></span><span id="loginChip" hidden></span>
@@ -1384,7 +1444,10 @@ jobs:
               <button class="text" id="subOnly">只提取字幕</button>
             </div>
             <div class="card" id="progCard" style="display:none">
-              <h2>正在生成</h2>
+              <div class="pvTop"><h2 id="pvTitle">正在生成</h2><span id="pvTime" class="mute">00:00</span><button class="sec" id="pvPause">暂停</button></div>
+              <div id="pvFlow"></div>
+              <div class="pvStats"><div><b id="pvReq">0</b><span>已完成请求</span></div><div><b id="pvRun">0</b><span>进行中</span></div><div><b id="pvPct">0%</b><span>总进度</span></div></div>
+              <div id="pvNow" class="mute"></div>
               <div class="lin" id="progLin"><i></i></div>
               <ol id="steps"></ol>
               <div id="progErr"></div>
@@ -2717,8 +2780,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.6.2";
+          const APP_VER = "1.6.3";
           const CHANGELOG = [
+            ["1.6.3", "生成时可暂停/继续；进度可视化（流程节点、请求计数、计时）；界面改为仿 iOS 风格"],
             ["1.6.2", "版本号自动读取安装包；设置页加入更新日志；材料页加入“一键复制反馈”；同一页多张截图只留最干净的第一张（正文）和批注最全的最后一张（其余课堂截图）"],
             ["1.6.1", "教辅模式规则改为各科通用：内容提要、类型、方法、例题、解析、答案、反思、变式、总结、强化训练"],
             ["1.6.0", "“学习笔记”改为“教辅模式”；修复公式 $$ 被删导致显示源码；识图不再估读未标出的数值"],
@@ -2754,6 +2818,60 @@ jobs:
             if (HAS_NATIVE) Native.copy(t); else { try { navigator.clipboard.writeText(t); } catch (e) {} }
             snack("已复制反馈包（" + Math.round(t.length / 1000) + " 千字），粘贴发给我即可");
           }
+          // ===== v1.6.3：暂停 + 生成过程可视化 =====
+          const PV = { paused: false, waiters: [], done: 0, run: 0, stage: 0, t0: 0, timer: null, aiDone: 0, aiTotal: 0 };
+          const PV_ST = ["解析", "字幕", "截图", "识图", "写笔记", "汇总", "完成"];
+          function pvGate() { return PV.paused ? new Promise(r => PV.waiters.push(r)) : Promise.resolve(); }
+          function pvDraw() {
+            const f = $("pvFlow"); if (!f) return;
+            f.innerHTML = PV_ST.map((s, i) => '<div class="pvS ' + (i < PV.stage ? "done" : i === PV.stage ? "cur" : "") + '"><i>' + (i < PV.stage ? "✓" : i + 1) + "</i>" + s + "</div>").join("");
+            $("pvReq").textContent = PV.done; $("pvRun").textContent = PV.run;
+            let pct = Math.round(PV.stage / (PV_ST.length - 1) * 100);
+            if (PV.stage >= 3 && PV.stage <= 5 && PV.aiTotal) pct = Math.min(95, Math.round((PV.stage + Math.min(1, PV.aiDone / PV.aiTotal)) / (PV_ST.length - 1) * 100));
+            $("pvPct").textContent = pct + "%";
+            $("progCard").classList.toggle("paused", PV.paused);
+          }
+          function pvSet(s) { if (s > PV.stage) { PV.stage = s; pvDraw(); } }
+          function pvReset() {
+            Object.assign(PV, { paused: false, done: 0, run: 0, stage: 0, aiDone: 0, aiTotal: 0, t0: Date.now() });
+            PV.waiters.splice(0).forEach(r => r());
+            const b = $("pvPause"); b.textContent = "暂停"; b.classList.remove("paused"); $("pvTitle").textContent = "正在生成";
+            clearInterval(PV.timer);
+            PV.timer = setInterval(() => {
+              const s = Math.floor((Date.now() - PV.t0) / 1000); $("pvTime").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+              if (!window.__busy && PV.stage > 0 && !PV.paused) clearInterval(PV.timer);
+            }, 1000);
+            pvDraw();
+          }
+          $("pvPause").onclick = () => {
+            PV.paused = !PV.paused; const b = $("pvPause");
+            if (PV.paused) { b.textContent = "继续"; b.classList.add("paused"); $("pvTitle").textContent = "已暂停"; snack(PV.run ? "正在进行的请求完成后停下" : "已暂停"); log("已暂停（进行中的请求会先完成）"); }
+            else { b.textContent = "暂停"; b.classList.remove("paused"); $("pvTitle").textContent = "正在生成"; log("继续生成"); PV.waiters.splice(0).forEach(r => r()); }
+            pvDraw();
+          };
+          const _httpPV = http;
+          http = async function (method, url, headers, body) {
+            await pvGate();
+            const ai = /chat\/completions/.test(url);
+            PV.run++; if (ai) PV.aiTotal++; pvDraw();
+            try { return await _httpPV(method, url, headers, body); }
+            finally { PV.run--; PV.done++; if (ai) PV.aiDone++; pvDraw(); }
+          };
+          const _logPV = log;
+          log = function (msg, cls) {
+            _logPV(msg, cls);
+            const m = String(msg || "");
+            if (!/已暂停|继续生成/.test(m) && $("pvNow")) $("pvNow").textContent = m;
+            if (/汇总|合并/.test(m)) pvSet(5);
+            else if (/分段|写笔记|生成笔记|第\s*\d+\s*段|正在写/.test(m)) pvSet(4);
+            else if (/识图|识别/.test(m)) pvSet(3);
+            else if (/截图/.test(m)) pvSet(2);
+            else if (/字幕|语音|文字稿/.test(m)) pvSet(1);
+            if (/完成|已保存/.test(m) && PV.stage >= 4) pvSet(6);
+          };
+          new MutationObserver(() => { const c = $("progCard"); if (c.style.display !== "none" && !c.dataset.pv) { c.dataset.pv = "1"; pvReset(); } else if (c.style.display === "none") delete c.dataset.pv; })
+            .observe($("progCard"), { attributes: true, attributeFilter: ["style"] });
+          pvDraw();
           // ---- 设置页：把截图卡片搬进分组、Key 显示/隐藏 ----
           (function () {
             const c = $("shotOn"); if (!c) return;
