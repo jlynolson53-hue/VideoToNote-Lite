@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 26
-                  versionName "1.6.9"
+                  versionCode 27
+                  versionName "1.7.0"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -2847,8 +2847,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.6.9";
+          const APP_VER = "1.7.0";
           const CHANGELOG = [
+            ["1.7.0", "修复 Framework7 生成页没有生效（样式检测方式在本地文件下被拦截）"],
             ["1.6.9", "试验：生成页改用 Framework7 iOS 样式（分组列表、分段控件、开关、大按钮），其他页面不变"],
             ["1.6.8", "去掉所有毛玻璃模糊：卡片、菜单、按钮、底栏恢复实色；保留自定义背景"],
             ["1.6.7", "默认背景改回纯色；设置页可上传自定义背景图；侧边栏去掉分割线、与页面背景融为一体"],
@@ -3018,7 +3019,12 @@ jobs:
           // v1.6.9：生成页改用 Framework7（样式加载成功才改，失败就保持原样）
           (function () {
             const link = $("f7css");
-            function ok() { try { return link.sheet && link.sheet.cssRules.length > 200; } catch (e) { return false; } }
+            function ok() {
+              const p = document.createElement("div"); p.className = "f7s"; p.style.cssText = "position:absolute;visibility:hidden";
+              document.body.appendChild(p);
+              const v = getComputedStyle(p).getPropertyValue("--f7-theme-color").trim();
+              p.remove(); return !!v;
+            }
             function build() {
               if (!ok() || document.querySelector(".f7s")) return;
               const card = $("genCard"); card.classList.remove("card"); card.classList.add("f7s");
@@ -3057,7 +3063,7 @@ jobs:
               const dk = () => ios.classList.toggle("dark", document.documentElement.dataset.theme === "dark");
               new MutationObserver(dk).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); dk();
             }
-            if (ok()) build(); else link.addEventListener("load", build);
+            if (ok()) build(); else { link.addEventListener("load", build); window.addEventListener("load", build); setTimeout(build, 1500); }
           })();
           // v1.6.7：自定义背景（vtn_bg）
           (function () {
