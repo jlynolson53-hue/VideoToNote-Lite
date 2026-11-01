@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 29
-                  versionName "1.7.2"
+                  versionCode 30
+                  versionName "1.7.3"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -1385,7 +1385,6 @@ jobs:
           </script>
           <link rel="stylesheet" href="katex/katex.min.css">
           <script src="katex/katex.min.js"></script>
-          <link rel="stylesheet" href="f7/f7-scoped.css" id="f7css">
           <style id="iosCss">
           :root{--primary:#007AFF;--on-primary:#fff;--primary-container:#E5F0FF;--on-primary-container:#003a80;--secondary-container:#E5F0FF;--on-secondary-container:#003a80;--background:#F2F2F7;--surface:#fff;--surface-container-low:#fff;--surface-container:#fff;--surface-container-high:#E9E9EB;--on-surface:#000;--on-surface-variant:#8E8E93;--outline:#C6C6C8;--outline-variant:rgba(60,60,67,.18);--fill:rgba(118,118,128,.12);--sep:rgba(60,60,67,.29);--green:#34C759}
           :root[data-theme=dark]{--primary:#0A84FF;--on-primary:#fff;--primary-container:#0A2A4D;--on-primary-container:#cfe4ff;--secondary-container:#0A2A4D;--on-secondary-container:#cfe4ff;--background:#000;--surface:#1C1C1E;--surface-container-low:#1C1C1E;--surface-container:#1C1C1E;--surface-container-high:#2C2C2E;--on-surface:#fff;--on-surface-variant:#8E8E93;--outline:#38383A;--outline-variant:rgba(84,84,88,.6);--fill:rgba(118,118,128,.24);--sep:rgba(84,84,88,.65);--green:#30D158}
@@ -1455,32 +1454,6 @@ jobs:
             html.has-bg .nav{background:transparent!important}
             .nav button.on .pill{background:var(--fill)!important;border-radius:14px!important}
           }
-          /* v1.6.9：Framework7 生成页，压掉全局 iOS 覆盖样式 */
-          .f7s{background:transparent!important;height:auto!important;overflow:visible!important;position:static!important;width:auto!important;font-size:inherit!important;line-height:inherit!important}
-          .f7s label.item-content{color:var(--f7-list-item-title-text-color,inherit)!important;font-size:17px!important;margin:0!important}
-          .f7s .item-label{color:var(--on-surface-variant)!important;font-size:13px!important}
-          .f7s #f7seg{display:block;padding:2px;border-radius:9px;background:rgba(118,118,128,.12);box-shadow:none}
-          :root[data-theme=dark] .f7s #f7seg{background:rgba(118,118,128,.24)}
-          .f7s #styleChips{width:100%;gap:0}
-          .f7s .ios{background:transparent;font-size:17px;--f7-theme-color:#007aff;--f7-theme-color-rgb:0,122,255;--f7-theme-color-shade:#0066d6;--f7-theme-color-tint:#298fff}
-          .f7s .ios.dark{--f7-theme-color:#0a84ff;--f7-theme-color-rgb:10,132,255;--f7-theme-color-shade:#0070e0;--f7-theme-color-tint:#339aff}
-          .f7s .list.inset,.f7s .block-strong.inset{margin-left:0!important;margin-right:0!important}
-          .f7s .block{padding-left:0!important;padding-right:0!important}
-          .f7s .block-title{margin-left:16px!important}
-          .f7s .item-input-wrap textarea,.f7s .item-input-wrap input{background:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;padding:0!important;width:100%;max-width:none!important;font-size:17px!important}
-          .f7s .item-input-wrap textarea{min-height:64px;resize:vertical}
-          .f7s .item-media #pasteBtn{width:40px;height:40px;min-height:40px;padding:0}
-          .f7s #styleChips{display:flex;margin:0}
-          .f7s #styleChips .chip5{flex:1;justify-content:center;background:transparent!important;border-radius:var(--f7-segmented-strong-button-active-border-radius,7px)!important;height:auto;min-height:32px;color:var(--f7-segmented-strong-button-text-color,#000)!important;font-weight:600!important}
-          .f7s #styleChips .chip5.on{background:var(--f7-segmented-strong-button-active-bg-color,#fff)!important;box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)!important}
-          :root[data-theme=dark] .f7s #styleChips .chip5{color:#fff!important}
-          :root[data-theme=dark] .f7s #styleChips .chip5.on{background:#636366!important}
-          .f7s .f7opt .toggle{pointer-events:none}
-          .f7s .f7btns{display:flex;flex-direction:column;gap:10px}
-          .f7s .f7btns .button{width:100%;font-size:17px!important;border-radius:999px!important;height:50px!important;min-height:50px}
-          .f7s .f7btns .button-fill{background:var(--f7-theme-color,#007aff)!important;color:#fff!important}
-          .f7s .f7btns .button-tonal{background:rgba(0,122,255,.12)!important;color:var(--f7-theme-color,#007aff)!important}
-          .f7s .f7req details.req{margin:0;border:none!important;background:none!important}
           </style>
           </head>
           <body>
@@ -2853,12 +2826,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.7.2";
+          const APP_VER = "1.7.3";
           const CHANGELOG = [
-            ["1.7.2", "修复 Framework7 生成页无法滚动；列表补上白色底块和分隔线；选项文字、分段控件宽度修正"],
-            ["1.7.1", "修复 Framework7 生成页仍未生效：改用样式文件里确实存在的变量检测，并手动补上主题色"],
-            ["1.7.0", "修复 Framework7 生成页没有生效（样式检测方式在本地文件下被拦截）"],
-            ["1.6.9", "试验：生成页改用 Framework7 iOS 样式（分组列表、分段控件、开关、大按钮），其他页面不变"],
+            ["1.7.3", "放弃 Framework7 试验，生成页恢复为 1.6.8 的界面（1.6.9–1.7.2 的改动全部撤回）"],
             ["1.6.8", "去掉所有毛玻璃模糊：卡片、菜单、按钮、底栏恢复实色；保留自定义背景"],
             ["1.6.7", "默认背景改回纯色；设置页可上传自定义背景图；侧边栏去掉分割线、与页面背景融为一体"],
             ["1.6.6", "链接框为空时点生成直接提示，不再弹出错误进度；出错信息不再被误判为进度阶段；液态玻璃加强：渐变背景、半透明卡片"],
@@ -3024,55 +2994,6 @@ jobs:
           $("goBtn").onclick = () => run(false);
           $("subOnly").onclick = () => run(true);
           setTimeout(showResume, 300);
-          // v1.6.9：生成页改用 Framework7（样式加载成功才改，失败就保持原样）
-          (function () {
-            const link = $("f7css");
-            function ok() {
-              const p = document.createElement("div"); p.className = "f7s"; p.style.cssText = "position:absolute;visibility:hidden";
-              p.innerHTML = '<div class="ios"></div>'; document.body.appendChild(p);
-              const v = getComputedStyle(p.firstChild).getPropertyValue("--f7-line-height").trim();
-              p.remove(); return !!v;
-            }
-            function build() {
-              if (!ok() || document.querySelector(".f7s")) return;
-              const card = $("genCard"); card.classList.remove("card"); card.classList.add("f7s");
-              const ios = document.createElement("div"); ios.className = "ios";
-              ios.innerHTML =
-                '<div class="block-title">B站链接或分享文字</div>' +
-                '<div class="list list-strong list-dividers-ios inset"><ul>' +
-                  '<li class="item-content item-input"><div class="item-inner"><div class="item-input-wrap" id="f7in"></div></div><div class="item-media" id="f7paste"></div></li>' +
-                  '<li class="item-content item-input"><div class="item-inner"><div class="item-title item-label">分P（留空=自动识别）</div><div class="item-input-wrap" id="f7p"></div></div></li>' +
-                '</ul></div>' +
-                '<div class="block-title">笔记风格</div><div class="block"><div class="segmented segmented-strong" id="f7seg"></div></div>' +
-                '<div class="block-title">选项</div>' +
-                '<div class="list list-strong list-dividers-ios inset f7opt"><ul>' +
-                  '<li><label class="item-content" data-c="chipTs"><div class="item-inner"><div class="item-title">显示时间戳</div><div class="item-after"><span class="toggle"><input type="checkbox"><span class="toggle-icon"></span></span></div></div></label></li>' +
-                  '<li><label class="item-content" data-c="chipShot"><div class="item-inner"><div class="item-title">截图笔记</div><div class="item-after"><span class="toggle"><input type="checkbox"><span class="toggle-icon"></span></span></div></div></label></li>' +
-                '</ul></div>' +
-                '<div class="block-title">我的要求</div><div class="block block-strong inset f7req" id="f7req"></div>' +
-                '<div class="block f7btns" id="f7btn"></div>';
-              const old = Array.from(card.children).filter(n => n.id !== "resumeBox");
-              card.appendChild(ios);
-              $("f7in").appendChild($("input")); $("f7paste").appendChild($("pasteBtn")); $("f7p").appendChild($("pnum"));
-              $("f7seg").appendChild($("styleChips")); $("f7req").appendChild($("reqBox"));
-              const go = $("goBtn"), so = $("subOnly");
-              go.className = "button button-large button-fill button-round"; so.className = "button button-large button-tonal button-round";
-              $("f7btn").append(go, so);
-              const keep = document.createElement("div"); keep.style.display = "none"; card.appendChild(keep);
-              keep.append($("style"), $("chipTs"), $("chipShot"));
-              const sw = $("tsOn").closest("label"); if (sw) keep.appendChild(sw);
-              old.forEach(n => { if (n.parentNode === card) keep.appendChild(n); });
-              ios.querySelectorAll(".f7opt label[data-c]").forEach(l => {
-                const c = $(l.dataset.c), cb = l.querySelector("input");
-                const sync = () => { cb.checked = c.classList.contains("on"); };
-                l.onclick = e => { e.preventDefault(); c.click(); sync(); };
-                new MutationObserver(sync).observe(c, { attributes: true, attributeFilter: ["class"] }); sync();
-              });
-              const dk = () => ios.classList.toggle("dark", document.documentElement.dataset.theme === "dark");
-              new MutationObserver(dk).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); dk();
-            }
-            if (ok()) build(); else { link.addEventListener("load", build); window.addEventListener("load", build); setTimeout(build, 1500); }
-          })();
           // v1.6.7：自定义背景（vtn_bg）
           (function () {
             const L = document.createElement("div"); L.id = "bgLayer"; document.body.prepend(L);
@@ -3336,28 +3257,6 @@ jobs:
           cp -r package/dist/fonts app/src/main/assets/katex/
           rm -rf package katex.tgz
           ls app/src/main/assets/katex
-
-      - name: Fetch Framework7 (scoped to generate page)
-        run: |
-          set -e
-          mkdir -p f7tmp && cd f7tmp
-          npm init -y > /dev/null
-          npm i framework7@8 postcss@8 postcss-prefix-selector@1 --no-audit --no-fund > /dev/null
-          F=$(ls node_modules/framework7/framework7-bundle.min.css 2>/dev/null || find node_modules/framework7 -name 'framework7-bundle*.css' | head -1)
-          echo "F7 css: $F"
-          cat > scope.js <<'JS_EOF'
-          const fs = require("fs"), postcss = require("postcss"), pre = require("postcss-prefix-selector");
-          const css = fs.readFileSync(process.argv[2], "utf8");
-          const out = postcss().use(pre({ prefix: ".f7s", transform(p, sel) {
-            if (/^(:root|html|body)/.test(sel)) return sel.replace(/^(:root|html|body)/, p);
-            return p + " " + sel;
-          } })).process(css).css;
-          fs.writeFileSync(process.argv[3], out);
-          console.log("scoped bytes", out.length);
-          JS_EOF
-          mkdir -p ../app/src/main/assets/f7
-          node scope.js "$F" ../app/src/main/assets/f7/f7-scoped.css
-          cd .. && rm -rf f7tmp
 
       - name: Fetch Material Symbols (from BeerCSS)
         run: |
