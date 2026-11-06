@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 34
-                  versionName "1.7.7"
+                  versionCode 35
+                  versionName "1.7.8"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -503,6 +503,15 @@ jobs:
               protected void onCreate(Bundle b) {
                   super.onCreate(b);
                   web = new WebView(this);
+                  {
+                      // v1.7.8：启动时按上次主题（或系统深浅色）先设底色，防止白闪
+                      String tm = "auto";
+                      try { tm = getSharedPreferences("vtn", MODE_PRIVATE).getString("theme", "auto"); } catch (Exception ignored) { }
+                      boolean night = "dark".equals(tm) || (!"light".equals(tm) && (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES);
+                      int bg = night ? 0xFF000000 : 0xFFF2F2F7;
+                      getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(bg));
+                      web.setBackgroundColor(bg);
+                  }
                   setContentView(web);
                   WebSettings s = web.getSettings();
                   s.setJavaScriptEnabled(true);
@@ -952,11 +961,16 @@ jobs:
 
                   @JavascriptInterface
                   public void setBars(final String color, final boolean light) {
+                      try { getSharedPreferences("vtn", MODE_PRIVATE).edit().putString("theme", light ? "light" : "dark").apply(); } catch (Exception ignored) { }
                       runOnUiThread(() -> {
                           try {
                               int c = android.graphics.Color.parseColor(color);
                               getWindow().setStatusBarColor(c);
                               getWindow().setNavigationBarColor(c);
+                              // v1.7.8：窗口和 WebView 底色跟随主题，避免弹键盘时露出白底
+                              getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(c));
+                              getWindow().getDecorView().setBackgroundColor(c);
+                              web.setBackgroundColor(c);
                               int f = getWindow().getDecorView().getSystemUiVisibility();
                               if (light) {
                                   f |= android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
@@ -2818,8 +2832,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.7.7";
+          const APP_VER = "1.7.8";
           const CHANGELOG = [
+            ["1.7.8", "修复黑夜模式下点输入框弹出键盘时短暂露出大片白色区域：窗口和网页底色改为跟随主题"],
             ["1.7.7", "增加界面动效：页面与卡片依次淡入、按钮按下回弹、进度当前步骤脉冲、提示条滑入、弹出菜单缩放；系统开启“减少动画”时自动关闭"],
             ["1.7.6", "应用图标换成蓝色笔记页；界面细调：标签贴近输入框、分组间距加大、主按钮更突出、数字等宽、列表卡片更清爽"],
             ["1.7.5", "打开或切回 App 时，剪贴板里有 B 站链接会自动粘贴（链接框为空时才粘贴，同一条只粘一次，可在设置里关闭）"],
