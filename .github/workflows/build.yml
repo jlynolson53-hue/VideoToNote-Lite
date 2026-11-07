@@ -3418,7 +3418,7 @@ jobs:
           </body>
           </html>
           VTN_EOF
-          sed -i "s/__VTN_BUILD__/${{ github.run_number }}/" app/src/main/assets/index.html
+          sed -i "s/__VTN_BUILD__/${GITHUB_RUN_NUMBER}/" app/src/main/assets/index.html
 
       - name: Fetch KaTeX
         run: |
