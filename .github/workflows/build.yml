@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 36
-                  versionName "1.7.9"
+                  versionCode 37
+                  versionName "1.8.0"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -2854,8 +2854,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.7.9";
+          const APP_VER = "1.8.0";
           const CHANGELOG = [
+            ["1.8.0", "修复检查更新误报“发现新版本 47”：改为按编译序号比较；提示框改成应用内样式，不再显示“网址为 file://”"],
             ["1.7.9", "笔记库可搜索正文；笔记可设置分类并按分类筛选；生成完成发系统通知；设置里新增导出备份、从备份恢复、检查更新（每天自动检查一次）"],
             ["1.7.8", "修复黑夜模式下点输入框弹出键盘时短暂露出大片白色区域：窗口和网页底色改为跟随主题"],
             ["1.7.7", "增加界面动效：页面与卡片依次淡入、按钮按下回弹、进度当前步骤脉冲、提示条滑入、弹出菜单缩放；系统开启“减少动画”时自动关闭"],
@@ -3122,17 +3123,42 @@ jobs:
               rd.readAsText(f); e.target.value = "";
             };
             function vcmp(a, b) { a = a.split(".").map(Number); b = b.split(".").map(Number); for (let i = 0; i < 3; i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) - (b[i] || 0); } return 0; }
+            const MY_BUILD = parseInt("__VTN_BUILD__") || 0;
+            function askBox(title, msg, okTxt) {
+              return new Promise(res => {
+                const m = document.createElement("div");
+                m.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4);padding:24px";
+                m.innerHTML = '<div style="background:var(--surface-container-high,#fff);color:var(--on-surface,#000);border-radius:20px;max-width:420px;width:100%;padding:22px 22px 14px;box-shadow:0 10px 40px rgba(0,0,0,.25);animation:vPop .22s ease-out">' +
+                  '<div style="font-size:19px;font-weight:600;margin-bottom:10px"></div><div class="mute" style="font-size:15px;line-height:1.6;white-space:pre-line"></div>' +
+                  '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="sec" data-r="0">以后再说</button><button class="sec" data-r="1" style="font-weight:600"></button></div></div>';
+                m.querySelector("div>div").textContent = title;
+                m.querySelector(".mute").textContent = msg;
+                m.querySelector('[data-r="1"]').textContent = okTxt;
+                m.onclick = e => { const b = e.target.closest("[data-r]"); if (b || e.target === m) { m.remove(); res(!!(b && b.dataset.r === "1")); } };
+                document.body.appendChild(m);
+              });
+            }
             async function checkUpd(manual) {
               const tip = $("updTip");
               try {
                 const r = await fetch("https://api.github.com/repos/jlynolson53-hue/VideoToNote-Lite/releases/latest", { cache: "no-store" });
                 if (!r.ok) throw new Error("HTTP " + r.status);
-                const j = await r.json(); const v = String(j.tag_name || j.name || "").replace(/^[^\d]*/, "");
+                const j = await r.json();
                 localStorage.setItem("vtn_upd_ts", String(Date.now()));
-                if (v && vcmp(v, APP_VER) > 0) {
-                  tip.textContent = "发现新版本 " + v + "（当前 " + APP_VER + "）";
-                  if (confirm("发现新版本 " + v + "，当前是 " + APP_VER + "。现在去下载？")) { const u = j.html_url || "https://github.com/jlynolson53-hue/VideoToNote-Lite/releases/latest"; HAS_NATIVE && Native.openUrl ? Native.openUrl(u) : open(u); }
-                } else if (manual) { tip.textContent = "已是最新版本（" + APP_VER + "）"; snack("已是最新版本"); }
+                const nb = parseInt((String(j.tag_name || "").match(/(\d+)\s*$/) || [])[1]) || 0;
+                const nv = (String(j.name || "").match(/v(\d+\.\d+\.\d+)/) || [])[1] || "";
+                const label = nv ? nv : "第 " + nb + " 版";
+                let newer = false;
+                if (MY_BUILD && nb) newer = nb > MY_BUILD;
+                else if (nv) newer = vcmp(nv, APP_VER) > 0;
+                if (newer) {
+                  tip.textContent = "发现新版本 " + label + "（当前 " + APP_VER + "）";
+                  const go = await askBox("发现新版本", "新版本：" + label + "\n当前版本：" + APP_VER + (MY_BUILD ? "（第 " + MY_BUILD + " 版）" : ""), "去下载");
+                  if (go) { const u = j.html_url || "https://github.com/jlynolson53-hue/VideoToNote-Lite/releases/latest"; HAS_NATIVE && Native.openUrl ? Native.openUrl(u) : open(u); }
+                } else {
+                  tip.textContent = "已是最新版本（" + APP_VER + (MY_BUILD ? "，第 " + MY_BUILD + " 版" : "") + "）";
+                  if (manual) snack("已是最新版本");
+                }
               } catch (e) { if (manual) snack("检查更新失败：" + e.message); }
             }
             $("updBtn").onclick = () => checkUpd(true);
@@ -3392,6 +3418,7 @@ jobs:
           </body>
           </html>
           VTN_EOF
+          sed -i "s/__VTN_BUILD__/${{ github.run_number }}/" app/src/main/assets/index.html
 
       - name: Fetch KaTeX
         run: |
@@ -3423,9 +3450,13 @@ jobs:
           name: VideoToNote-Lite
           path: VideoToNote-Lite.apk
 
+      - name: Read version
+        id: ver
+        run: echo "v=$(grep -rhoP 'versionName "\K[^"]+' --include=build.gradle . | head -n1)" >> "$GITHUB_OUTPUT" || true
+
       - name: Publish to Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: 视频笔记精简版 第${{ github.run_number }}版
+          name: 视频笔记精简版 v${{ steps.ver.outputs.v }}（第${{ github.run_number }}版）
           files: VideoToNote-Lite.apk
