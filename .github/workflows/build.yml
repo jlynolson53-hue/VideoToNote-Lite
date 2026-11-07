@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 37
-                  versionName "1.8.0"
+                  versionCode 38
+                  versionName "1.8.1"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -763,6 +763,38 @@ jobs:
                               if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(i); else startService(i);
                           } catch (Exception ignored) { }
                       });
+                  }
+
+                  @JavascriptInterface
+                  public void notifyDone2(final String title, final String text) {
+                      try {
+                          android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                          android.app.Notification.Builder nb;
+                          if (Build.VERSION.SDK_INT >= 26) {
+                              nm.createNotificationChannel(new android.app.NotificationChannel("done", "生成完成", android.app.NotificationManager.IMPORTANCE_DEFAULT));
+                              nb = new android.app.Notification.Builder(MainActivity.this, "done");
+                          } else nb = new android.app.Notification.Builder(MainActivity.this);
+                          Intent open = new Intent(MainActivity.this, MainActivity.class);
+                          open.setAction(Intent.ACTION_MAIN);
+                          open.addCategory(Intent.CATEGORY_LAUNCHER);
+                          android.app.PendingIntent pi = android.app.PendingIntent.getActivity(MainActivity.this, 1, open,
+                              android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
+                          nb.setSmallIcon(getApplicationInfo().icon).setContentTitle(title).setContentText(text)
+                            .setStyle(new android.app.Notification.BigTextStyle().bigText(text))
+                            .setAutoCancel(true).setContentIntent(pi);
+                          nm.notify(2, nb.build());
+                      } catch (Exception ignored) { }
+                  }
+
+                  @JavascriptInterface
+                  public String imgWriteB64(String name, String b64) {
+                      try {
+                          if (name == null || name.contains("/") || name.contains("..")) return "err:name";
+                          File d = new File(getFilesDir(), "img"); d.mkdirs();
+                          FileOutputStream o = new FileOutputStream(new File(d, name));
+                          o.write(Base64.decode(b64, Base64.DEFAULT)); o.close();
+                          return "ok";
+                      } catch (Exception e) { return "err:" + e.getMessage(); }
                   }
 
                   @JavascriptInterface
@@ -1857,7 +1889,7 @@ jobs:
           function loadHist() { try { return JSON.parse(localStorage.getItem("vtn_hist") || "[]"); } catch (e) { return []; } }
           function saveHist(item) {
             let h = loadHist().filter(x => !(x.bvid === item.bvid && x.p === item.p && x.kind === item.kind));
-            h.unshift(item); h = h.slice(0, 15);
+            h.unshift(item); h = h.slice(0, 300);
             for (;;) { try { localStorage.setItem("vtn_hist", JSON.stringify(h)); break; } catch (e) { if (!h.length) break; h.pop(); } }
             drawHist();
           }
@@ -1892,7 +1924,7 @@ jobs:
                 md += "\n\n---\n来源：https://www.bilibili.com/video/" + v.bvid + "?p=" + v.p + "\n";
               }
               const item = { title: v.title, bvid: v.bvid, p: v.p, md, srt, kind: subOnly ? "sub" : "note", time: Date.now() };
-              saveHist(item); show(item); try { if (HAS_NATIVE && Native.notifyDone) Native.notifyDone(item.title || "笔记"); } catch (e) {}
+              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
               log("完成！", "o");
             } catch (e) {
               log("出错了：" + e.message, "e");
@@ -2269,7 +2301,7 @@ jobs:
                 md += "\n\n---\n来源：https://www.bilibili.com/video/" + v.bvid + "?p=" + v.p + "\n";
               }
               const item = { title: v.title, bvid: v.bvid, p: v.p, md, srt, kind: subOnly ? "sub" : "note", time: Date.now(), imgs: frames.map(f => f.name) };
-              saveHist(item); show(item); try { if (HAS_NATIVE && Native.notifyDone) Native.notifyDone(item.title || "笔记"); } catch (e) {}
+              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
               log("完成！", "o");
             } catch (e) {
               log("出错了：" + e.message, "e");
@@ -2432,7 +2464,7 @@ jobs:
                   calls: CAP, vers: [{ md, note: "首次生成", time }], cur: 0
                 });
               }
-              saveHist(item); show(item); try { if (HAS_NATIVE && Native.notifyDone) Native.notifyDone(item.title || "笔记"); } catch (e) {}
+              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
               log("完成！", "o");
             } catch (e) {
               log("出错了：" + e.message, "e");
@@ -2518,7 +2550,7 @@ jobs:
                   calls: CAP, vers: [{ md, note: "首次生成", time }], cur: 0
                 });
               }
-              saveHist(item); show(item); try { if (HAS_NATIVE && Native.notifyDone) Native.notifyDone(item.title || "笔记"); } catch (e) {}
+              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
               if (HAS_NATIVE) Native.taskDel(st.id);
               log("完成！", "o");
             } catch (e) {
@@ -2854,8 +2886,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.8.0";
+          const APP_VER = "1.8.1";
           const CHANGELOG = [
+            ["1.8.1", "删除检查更新；笔记库最多保存 300 篇（原来 15 篇）；搜索加清空按钮、结果数、关键词高亮和正文摘录；分类改用底部面板选择，筛选栏显示篇数和“未分类”，生成页可预选分类；完成提醒：在前台显示提示条，在后台发通知并带标题和分类；备份分“完整（含截图和历史版本）”和“仅正文”，恢复前显示预览"],
             ["1.8.0", "修复检查更新误报“发现新版本 47”：改为按编译序号比较；提示框改成应用内样式，不再显示“网址为 file://”"],
             ["1.7.9", "笔记库可搜索正文；笔记可设置分类并按分类筛选；生成完成发系统通知；设置里新增导出备份、从备份恢复、检查更新（每天自动检查一次）"],
             ["1.7.8", "修复黑夜模式下点输入框弹出键盘时短暂露出大片白色区域：窗口和网页底色改为跟随主题"],
@@ -3058,111 +3091,246 @@ jobs:
               sw.onchange = () => localStorage.setItem("vtn_autoclip", sw.checked ? "1" : "0");
             }
           })();
-          // v1.7.9：分类、备份恢复、检查更新
+          // v1.8.1：笔记库体验（搜索高亮、分类面板、生成时选分类、完整备份恢复）；已删除检查更新
           (function () {
-            const TAGS = ["物理", "化学", "生物", "数学", "其他"];
-            const lib = $("libQ") && $("libQ").closest(".search");
-            if (lib) {
-              const bar = document.createElement("div"); bar.id = "tagBar";
-              bar.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px";
-              function drawBar() {
-                bar.innerHTML = "";
-                const used = Array.from(new Set(loadHist().map(x => x.tag).filter(Boolean)));
-                const all = [""].concat(TAGS.filter(t => used.includes(t)), used.filter(t => !TAGS.includes(t)));
-                all.forEach(t => {
-                  const b = document.createElement("button"); b.className = "chip5" + ((window.__tagF || "") === t ? " on" : "");
-                  b.textContent = t || "全部";
-                  b.onclick = () => { window.__tagF = t; drawBar(); drawHist(); };
-                  bar.appendChild(b);
-                });
-                bar.style.display = used.length ? "flex" : "none";
-              }
-              lib.after(bar); drawBar(); window.__drawTagBar = drawBar;
+            const PRESET = ["物理", "化学", "生物", "数学", "语文", "英语", "其他"];
+            const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+            const st = document.createElement("style");
+            st.textContent =
+              "#tagBar{display:flex;gap:8px;overflow-x:auto;margin:0 0 14px;padding-bottom:2px;scrollbar-width:none}#tagBar::-webkit-scrollbar{display:none}" +
+              "#tagBar .chip5{flex:none}#tagBar .chip5 b{font-weight:500;opacity:.6;margin-left:2px}" +
+              ".tagPill{display:inline-block;font-size:12px;line-height:18px;padding:0 8px;border-radius:9px;background:var(--secondary-container);color:var(--on-secondary-container);margin-right:6px;vertical-align:1px}" +
+              ".snip{font-size:13px;color:var(--on-surface-variant);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}" +
+              "mark.hl{background:rgba(255,204,0,.45);color:inherit;border-radius:3px;padding:0 1px}" +
+              ".libMeta{display:flex;justify-content:space-between;align-items:center;margin:-6px 4px 10px;font-size:13px;color:var(--on-surface-variant)}" +
+              ".qx{border:0;background:transparent;color:var(--on-surface-variant);font-size:18px;width:36px;height:36px;border-radius:18px;display:none}" +
+              ".vSheetM{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;animation:vFade .2s}" +
+              "@keyframes vFade{from{opacity:0}to{opacity:1}}@keyframes vUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}" +
+              ".vSheet{background:var(--surface-container-high,#fff);color:var(--on-surface,#000);width:100%;max-width:560px;border-radius:24px 24px 0 0;padding:10px 20px calc(18px + env(safe-area-inset-bottom));animation:vUp .28s cubic-bezier(.22,1,.36,1);max-height:85vh;overflow:auto}" +
+              ".vSheet .grab{width:36px;height:4px;border-radius:2px;background:var(--outline);opacity:.5;margin:0 auto 14px}" +
+              ".vSheet h3{margin:0 0 6px;font-size:19px}.vSheet .row{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}" +
+              ".vSheet .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}" +
+              ".vSheet input[type=text]{width:100%;box-sizing:border-box}" +
+              ".bkInfo{font-size:13px;color:var(--on-surface-variant);margin:2px 0 10px;line-height:1.6}" +
+              "@media (min-width:841px){.vSheetM{align-items:center}.vSheet{border-radius:24px}}";
+            document.head.appendChild(st);
+
+            // ---- 通用底部面板 ----
+            function sheet(build) {
+              return new Promise(res => {
+                const m = document.createElement("div"); m.className = "vSheetM";
+                const p = document.createElement("div"); p.className = "vSheet"; p.innerHTML = '<div class="grab"></div>';
+                m.appendChild(p);
+                const done = v => { if (!m.isConnected) return; m.remove(); window.__sheetClose = null; res(v); };
+                m.onclick = e => { if (e.target === m) done(null); };
+                window.__sheetClose = () => done(null);
+                build(p, done);
+                document.body.appendChild(m);
+              });
             }
-            window.__setTag = function (it) {
-              const t = prompt("分类名称（如 物理、化学、生物；留空=取消分类）", it.tag || "");
-              if (t === null) return;
-              const h = loadHist(); const x = h.find(y => y.time === it.time); if (!x) return;
-              x.tag = t.trim().slice(0, 12); if (!x.tag) delete x.tag;
-              try { localStorage.setItem("vtn_hist", JSON.stringify(h)); } catch (e) { snack("保存失败：空间不足"); return; }
-              if (window.__drawTagBar) window.__drawTagBar(); drawHist(); snack(x.tag ? "已归入 " + x.tag : "已取消分类");
+            const _back = window.__back;
+            if (typeof _back === "function") window.__back = function () { if (window.__sheetClose) { window.__sheetClose(); return true; } return _back.apply(this, arguments); };
+            function ask(title, msg, ok, okDanger) {
+              return sheet((p, done) => {
+                p.insertAdjacentHTML("beforeend", '<h3></h3><div class="mute" style="white-space:pre-line;line-height:1.6"></div><div class="acts"><button class="sec" data-r="0">取消</button><button class="sec" data-r="1" style="font-weight:600"></button></div>');
+                p.querySelector("h3").textContent = title; p.querySelector(".mute").textContent = msg;
+                const okb = p.querySelector('[data-r="1"]'); okb.textContent = ok; if (okDanger) okb.style.color = "#FF3B30";
+                p.querySelectorAll("[data-r]").forEach(b => b.onclick = () => done(b.dataset.r === "1"));
+              });
+            }
+            window.__ask = ask;
+
+            // ---- 分类数据 ----
+            const allTags = () => { const u = Array.from(new Set(loadHist().map(x => x.tag).filter(Boolean))); return PRESET.concat(u.filter(t => !PRESET.includes(t))); };
+            function saveTag(time, tag) {
+              const h = loadHist(); const x = h.find(y => y.time === time); if (!x) return false;
+              if (tag) x.tag = tag; else delete x.tag;
+              try { localStorage.setItem("vtn_hist", JSON.stringify(h)); } catch (e) { snack("保存失败：空间不足"); return false; }
+              return true;
+            }
+            function pickTag(cur, title) {
+              return sheet((p, done) => {
+                p.insertAdjacentHTML("beforeend", '<h3></h3><div class="mute">选一个分类，或输入新的分类名</div><div class="row"></div><input type="text" maxlength="12" placeholder="新分类，例如 地理"><div class="acts"><button class="sec" data-a="clr">取消分类</button><button class="sec" data-a="ok" style="font-weight:600">确定</button></div>');
+                p.querySelector("h3").textContent = title || "设置分类";
+                const row = p.querySelector(".row"), inp = p.querySelector("input");
+                allTags().forEach(t => {
+                  const b = document.createElement("button"); b.className = "chip5" + (t === cur ? " on" : ""); b.textContent = t;
+                  b.onclick = () => done(t); row.appendChild(b);
+                });
+                p.querySelector('[data-a="clr"]').onclick = () => done("");
+                p.querySelector('[data-a="ok"]').onclick = () => { const v = inp.value.trim(); v ? done(v.slice(0, 12)) : done(cur || ""); };
+                inp.onkeydown = e => { if (e.key === "Enter") p.querySelector('[data-a="ok"]').click(); };
+              });
+            }
+            window.__setTag = async function (it) {
+              const t = await pickTag(it.tag || "", "《" + String(it.title || "").slice(0, 20) + "》的分类");
+              if (t === null || t === (it.tag || "")) return;
+              if (saveTag(it.time, t)) { drawBar(); drawHist(); snack(t ? "已归入「" + t + "」" : "已取消分类"); }
             };
+
+            // ---- 笔记库：分类栏 + 搜索 ----
+            const q = $("libQ"), lib = q && q.closest(".search");
+            const bar = document.createElement("div"); bar.id = "tagBar";
+            const meta = document.createElement("div"); meta.className = "libMeta";
+            if (lib) {
+              lib.after(bar); bar.after(meta);
+              const x = document.createElement("button"); x.className = "qx"; x.textContent = "×"; x.title = "清空";
+              lib.appendChild(x);
+              x.onclick = () => { q.value = ""; x.style.display = "none"; drawHist(); q.focus(); };
+              let tm = 0;
+              q.oninput = () => { x.style.display = q.value ? "block" : "none"; clearTimeout(tm); tm = setTimeout(drawHist, 180); };
+            }
+            function drawBar() {
+              const h = loadHist(), cnt = {}; h.forEach(x => { if (x.tag) cnt[x.tag] = (cnt[x.tag] || 0) + 1; });
+              const used = Object.keys(cnt);
+              if (window.__tagF && !cnt[window.__tagF]) window.__tagF = "";
+              bar.innerHTML = "";
+              const list = [["", h.length]].concat(PRESET.filter(t => cnt[t]).map(t => [t, cnt[t]]), used.filter(t => !PRESET.includes(t)).map(t => [t, cnt[t]]));
+              const none = h.filter(x => !x.tag).length;
+              if (used.length && none) list.push(["__none", none]);
+              list.forEach(([t, n]) => {
+                const b = document.createElement("button"); b.className = "chip5" + ((window.__tagF || "") === t ? " on" : "");
+                b.innerHTML = esc(t === "" ? "全部" : t === "__none" ? "未分类" : t) + " <b>" + n + "</b>";
+                b.onclick = () => { window.__tagF = t; drawBar(); drawHist(); };
+                bar.appendChild(b);
+              });
+              bar.style.display = used.length ? "flex" : "none";
+            }
+            window.__drawTagBar = drawBar;
+            // 列表画完后：加分类标签、正文摘录高亮、结果数
+            const _dh = drawHist;
+            drawHist = function () {
+              const TF = window.__tagF || "";
+              window.__tagF = TF === "__none" ? "" : TF;
+              const kw = q ? q.value.trim() : "";
+              const all = loadHist();
+              if (TF === "__none") { const keep = localStorage.getItem("vtn_hist"); try { localStorage.setItem("vtn_hist", JSON.stringify(all.filter(x => !x.tag))); _dh(); } finally { localStorage.setItem("vtn_hist", keep); } }
+              else _dh();
+              window.__tagF = TF;
+              const box = $("hist"); if (!box) return;
+              const kl = kw.toLowerCase();
+              const shown = all.filter(it => (!TF || (TF === "__none" ? !it.tag : it.tag === TF)) && (!kl || String(it.title || "").toLowerCase().includes(kl) || String(it.md || "").toLowerCase().includes(kl) || String(it.tag || "").toLowerCase().includes(kl)));
+              const re = kw ? new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig") : null;
+              box.querySelectorAll(".nc").forEach((d, i) => {
+                const it = shown[i]; if (!it) return;
+                const nt = d.querySelector(".nt"), mu = d.querySelector(".nb .mute");
+                if (re) nt.innerHTML = esc(it.title).replace(new RegExp(esc(kw).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig"), m => '<mark class="hl">' + m + "</mark>");
+                if (it.tag && mu) { mu.textContent = mu.textContent.replace(/^\[[^\]]*\]\s*/, ""); mu.insertAdjacentHTML("afterbegin", '<span class="tagPill">' + esc(it.tag) + "</span>"); }
+                if (re && !String(it.title || "").toLowerCase().includes(kl)) {
+                  const md = String(it.md || "").replace(/!\[[^\]]*\]\([^)]*\)|[#*>`|_]/g, " ").replace(/\s+/g, " ");
+                  const k = md.toLowerCase().indexOf(kl);
+                  if (k >= 0) {
+                    const a = Math.max(0, k - 24), piece = (a ? "…" : "") + md.slice(a, k + kw.length + 60);
+                    const sn = document.createElement("div"); sn.className = "snip";
+                    sn.innerHTML = esc(piece).replace(new RegExp(esc(kw).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig"), m => '<mark class="hl">' + m + "</mark>");
+                    d.querySelector(".nb").appendChild(sn);
+                  }
+                }
+              });
+              meta.innerHTML = kw || TF ? "<span>找到 " + shown.length + " 篇</span>" : "<span>共 " + all.length + " 篇笔记</span>";
+              meta.style.display = all.length ? "flex" : "none";
+            };
+            drawBar(); drawHist();
+
+            // ---- 生成页：选分类，生成的笔记自动归类 ----
+            const go = $("goBtn");
+            if (go) {
+              const lb = document.createElement("label"); lb.textContent = "分类（可选）";
+              const row = document.createElement("div"); row.id = "genTagRow"; row.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin:0 0 6px";
+              function drawGen() {
+                const cur = localStorage.getItem("vtn_gentag") || "";
+                row.innerHTML = "";
+                [""].concat(allTags()).forEach(t => {
+                  const b = document.createElement("button"); b.className = "chip5" + (cur === t ? " on" : ""); b.textContent = t || "不分类";
+                  b.onclick = () => { localStorage.setItem("vtn_gentag", t); drawGen(); };
+                  row.appendChild(b);
+                });
+              }
+              drawGen();
+              const anchor = $("reqBox") || go;
+              anchor.before(lb, row);
+              window.__genTag = () => localStorage.getItem("vtn_gentag") || "";
+            }
+
+            // ---- 生成完成：前台用提示条，后台发系统通知 ----
+            window.__doneNotify = function (item) {
+              const t = item.kind === "sub" ? "字幕已提取" : "笔记已写好";
+              if (document.hidden) { try { if (HAS_NATIVE && Native.notifyDone2) Native.notifyDone2(t, "《" + (item.title || "笔记") + "》" + (item.tag ? " · " + item.tag : "") + "，点按查看"); else if (HAS_NATIVE && Native.notifyDone) Native.notifyDone(item.title || ""); } catch (e) {} }
+              else snack(t + "：" + (item.title || ""));
+              drawBar();
+            };
+
+            // ---- 备份与恢复 ----
             const about = $("verTxt") && $("verTxt").closest(".grp");
             if (!about) return;
-            const gt = document.createElement("div"); gt.className = "gt"; gt.textContent = "备份与更新";
+            const gt = document.createElement("div"); gt.className = "gt"; gt.textContent = "备份与恢复";
             const g = document.createElement("div"); g.className = "grp";
             g.innerHTML = '<div class="li" style="display:flex;gap:10px;flex-wrap:wrap;padding:10px 0">' +
               '<button class="sec" id="bkOut">导出备份</button><button class="sec" id="bkIn">从备份恢复</button>' +
-              '<button class="sec" id="updBtn">检查更新</button>' +
               '<input type="file" id="bkFile" accept=".json,application/json" style="display:none"></div>' +
-              '<p class="mute" id="updTip" style="margin:4px 0 8px">备份包含笔记正文、分类和设置（不含 API Key 和截图图片）</p>';
+              '<div class="bkInfo" id="bkInfo"></div>';
             about.before(gt, g);
-            const SKIP = ["vtn_set", "vtn_bg", "vtn_lastclip"];
-            $("bkOut").onclick = () => {
-              const data = { app: "vtn", ver: APP_VER, time: Date.now(), ls: {} };
+            function info() {
+              const h = loadHist(), ts = parseInt(localStorage.getItem("vtn_bk_ts") || "0");
+              const imgs = h.reduce((n, x) => n + ((x.imgs && x.imgs.length) || 0), 0);
+              $("bkInfo").textContent = "笔记 " + h.length + " 篇，截图 " + imgs + " 张。" + (ts ? "上次备份：" + new Date(ts).toLocaleString() : "还没有备份过") + "。备份文件存到 下载/VideoToNote，不含 API Key。";
+            }
+            info();
+            $("bkOut").onclick = async () => {
+              const h = loadHist(); if (!h.length) { snack("还没有笔记可以备份"); return; }
+              const imgN = h.reduce((n, x) => n + ((x.imgs && x.imgs.length) || 0), 0);
+              const mode = await sheet((p, done) => {
+                p.insertAdjacentHTML("beforeend", '<h3>导出备份</h3><div class="mute" style="line-height:1.6">共 ' + h.length + ' 篇笔记、' + imgN + ' 张截图</div>' +
+                  '<div class="acts" style="flex-direction:column;align-items:stretch"><button class="big" data-m="full">完整备份（含截图和历史版本）</button><button class="sec" data-m="lite">仅正文（文件小）</button><button class="sec" data-m="">取消</button></div>');
+                p.querySelectorAll("[data-m]").forEach(b => b.onclick = () => done(b.dataset.m || null));
+              });
+              if (!mode) return;
+              snack("正在打包备份…");
+              await new Promise(r => setTimeout(r, 60));
+              const SKIP = ["vtn_set", "vtn_bg", "vtn_lastclip", "vtn_upd_ts"];
+              const data = { app: "vtn", fmt: 2, ver: APP_VER, time: Date.now(), ls: {}, mat: {}, img: {} };
               for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("vtn_") && !SKIP.includes(k)) data.ls[k] = localStorage.getItem(k); }
-              const d = new Date(), nm = "视频笔记备份_" + d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") + ".json";
-              try { const r = HAS_NATIVE && Native.saveFile ? Native.saveFile(nm, JSON.stringify(data)) : ""; snack(r && String(r).startsWith("err") ? "导出失败：" + r : "已导出到下载目录：" + nm); }
-              catch (e) { snack("导出失败：" + e.message); }
+              if (mode === "full" && HAS_NATIVE) {
+                h.forEach(it => {
+                  if (it.mat) { try { const t = Native.readText(it.mat); if (t) data.mat[it.mat] = t; } catch (e) {} }
+                  (it.imgs || []).forEach(n => { try { const b = Native.readB64(n); if (b) data.img[n] = b; } catch (e) {} });
+                });
+              }
+              const d = new Date(), p2 = n => String(n).padStart(2, "0");
+              const nm = "视频笔记备份_" + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + "_" + p2(d.getHours()) + p2(d.getMinutes()) + (mode === "full" ? "_完整" : "_正文") + ".json";
+              try {
+                const txt = JSON.stringify(data);
+                const r = HAS_NATIVE && Native.saveFile ? Native.saveFile(nm, txt) : "";
+                if (r && String(r).startsWith("err")) throw new Error(r);
+                localStorage.setItem("vtn_bk_ts", String(Date.now())); info();
+                snack("已导出 " + (txt.length / 1048576).toFixed(1) + " MB：下载/VideoToNote/" + nm);
+              } catch (e) { snack("导出失败：" + e.message); }
             };
             $("bkIn").onclick = () => $("bkFile").click();
             $("bkFile").onchange = e => {
               const f = e.target.files && e.target.files[0]; if (!f) return;
+              e.target.value = "";
               const rd = new FileReader();
-              rd.onload = () => {
+              rd.onload = async () => {
                 let d; try { d = JSON.parse(rd.result); } catch (x) { snack("不是有效的备份文件"); return; }
                 if (!d || d.app !== "vtn" || !d.ls) { snack("不是视频笔记的备份文件"); return; }
                 let cur = loadHist(), inc = []; try { inc = JSON.parse(d.ls.vtn_hist || "[]"); } catch (x) {}
-                const seen = new Set(cur.map(x => x.time)); let n = 0;
-                inc.forEach(x => { if (!seen.has(x.time)) { cur.push(x); n++; } });
-                cur.sort((a, b) => b.time - a.time);
-                if (!confirm("备份里有 " + inc.length + " 篇笔记，其中 " + n + " 篇是新的。合并进笔记库？（不会删除现有笔记）")) return;
-                try { localStorage.setItem("vtn_hist", JSON.stringify(cur)); } catch (x) { snack("空间不足，恢复失败"); return; }
-                if (window.__drawTagBar) window.__drawTagBar(); drawHist(); snack("已恢复 " + n + " 篇笔记");
-              };
-              rd.readAsText(f); e.target.value = "";
-            };
-            function vcmp(a, b) { a = a.split(".").map(Number); b = b.split(".").map(Number); for (let i = 0; i < 3; i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) - (b[i] || 0); } return 0; }
-            const MY_BUILD = parseInt("__VTN_BUILD__") || 0;
-            function askBox(title, msg, okTxt) {
-              return new Promise(res => {
-                const m = document.createElement("div");
-                m.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4);padding:24px";
-                m.innerHTML = '<div style="background:var(--surface-container-high,#fff);color:var(--on-surface,#000);border-radius:20px;max-width:420px;width:100%;padding:22px 22px 14px;box-shadow:0 10px 40px rgba(0,0,0,.25);animation:vPop .22s ease-out">' +
-                  '<div style="font-size:19px;font-weight:600;margin-bottom:10px"></div><div class="mute" style="font-size:15px;line-height:1.6;white-space:pre-line"></div>' +
-                  '<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="sec" data-r="0">以后再说</button><button class="sec" data-r="1" style="font-weight:600"></button></div></div>';
-                m.querySelector("div>div").textContent = title;
-                m.querySelector(".mute").textContent = msg;
-                m.querySelector('[data-r="1"]').textContent = okTxt;
-                m.onclick = e => { const b = e.target.closest("[data-r]"); if (b || e.target === m) { m.remove(); res(!!(b && b.dataset.r === "1")); } };
-                document.body.appendChild(m);
-              });
-            }
-            async function checkUpd(manual) {
-              const tip = $("updTip");
-              try {
-                const r = await fetch("https://api.github.com/repos/jlynolson53-hue/VideoToNote-Lite/releases/latest", { cache: "no-store" });
-                if (!r.ok) throw new Error("HTTP " + r.status);
-                const j = await r.json();
-                localStorage.setItem("vtn_upd_ts", String(Date.now()));
-                const nb = parseInt((String(j.tag_name || "").match(/(\d+)\s*$/) || [])[1]) || 0;
-                const nv = (String(j.name || "").match(/v(\d+\.\d+\.\d+)/) || [])[1] || "";
-                const label = nv ? nv : "第 " + nb + " 版";
-                let newer = false;
-                if (MY_BUILD && nb) newer = nb > MY_BUILD;
-                else if (nv) newer = vcmp(nv, APP_VER) > 0;
-                if (newer) {
-                  tip.textContent = "发现新版本 " + label + "（当前 " + APP_VER + "）";
-                  const go = await askBox("发现新版本", "新版本：" + label + "\n当前版本：" + APP_VER + (MY_BUILD ? "（第 " + MY_BUILD + " 版）" : ""), "去下载");
-                  if (go) { const u = j.html_url || "https://github.com/jlynolson53-hue/VideoToNote-Lite/releases/latest"; HAS_NATIVE && Native.openUrl ? Native.openUrl(u) : open(u); }
-                } else {
-                  tip.textContent = "已是最新版本（" + APP_VER + (MY_BUILD ? "，第 " + MY_BUILD + " 版" : "") + "）";
-                  if (manual) snack("已是最新版本");
+                const seen = new Set(cur.map(x => x.time)), add = inc.filter(x => !seen.has(x.time));
+                const imgN = Object.keys(d.img || {}).length;
+                const ok = await ask("从备份恢复", "备份时间：" + new Date(d.time || 0).toLocaleString() + "\n备份里有 " + inc.length + " 篇笔记，其中 " + add.length + " 篇是新的" + (imgN ? "，含 " + imgN + " 张截图" : "（不含截图）") + "。\n\n只会添加新笔记，不会删除或覆盖现有笔记。", "恢复 " + add.length + " 篇");
+                if (!ok) return;
+                let imgOk = 0;
+                if (HAS_NATIVE) {
+                  Object.keys(d.mat || {}).forEach(k => { try { Native.writeText(k, d.mat[k]); } catch (x) {} });
+                  if (Native.imgWriteB64) Object.keys(d.img || {}).forEach(k => { try { if (!Native.imgExists(k) && Native.imgWriteB64(k, d.img[k]) === "ok") imgOk++; } catch (x) {} });
                 }
-              } catch (e) { if (manual) snack("检查更新失败：" + e.message); }
-            }
-            $("updBtn").onclick = () => checkUpd(true);
-            if (Date.now() - parseInt(localStorage.getItem("vtn_upd_ts") || "0") > 86400000) setTimeout(() => checkUpd(false), 3000);
+                cur = cur.concat(add).sort((a, b) => b.time - a.time);
+                try { localStorage.setItem("vtn_hist", JSON.stringify(cur)); } catch (x) { snack("手机存储空间不足，恢复失败"); return; }
+                drawBar(); drawHist(); info();
+                snack("已恢复 " + add.length + " 篇笔记" + (imgOk ? "、" + imgOk + " 张截图" : ""));
+              };
+              rd.readAsText(f);
+            };
           })();
           // v1.6.7：自定义背景（vtn_bg）
           (function () {
@@ -3418,7 +3586,6 @@ jobs:
           </body>
           </html>
           VTN_EOF
-          sed -i "s/__VTN_BUILD__/${GITHUB_RUN_NUMBER}/" app/src/main/assets/index.html
 
       - name: Fetch KaTeX
         run: |
