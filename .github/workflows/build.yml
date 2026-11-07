@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 35
-                  versionName "1.7.8"
+                  versionCode 36
+                  versionName "1.7.9"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -535,8 +535,10 @@ jobs:
                           fileCb = cb;
                           Intent it = new Intent(Intent.ACTION_GET_CONTENT);
                           it.addCategory(Intent.CATEGORY_OPENABLE);
-                          it.setType("image/*");
-                          try { startActivityForResult(Intent.createChooser(it, "选择背景图片"), 7301); }
+                          String ty = "*/*";
+                          try { String[] at = p.getAcceptTypes(); if (at != null) for (String a : at) if (a != null && a.startsWith("image")) ty = "image/*"; } catch (Exception ignored) { }
+                          it.setType(ty);
+                          try { startActivityForResult(Intent.createChooser(it, ty.startsWith("image") ? "选择背景图片" : "选择备份文件"), 7301); }
                           catch (Exception e) { fileCb = null; return false; }
                           return true;
                       }
@@ -761,6 +763,26 @@ jobs:
                               if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(i); else startService(i);
                           } catch (Exception ignored) { }
                       });
+                  }
+
+                  @JavascriptInterface
+                  public void notifyDone(final String title) {
+                      try {
+                          android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                          android.app.Notification.Builder nb;
+                          if (Build.VERSION.SDK_INT >= 26) {
+                              nm.createNotificationChannel(new android.app.NotificationChannel("done", "生成完成", android.app.NotificationManager.IMPORTANCE_DEFAULT));
+                              nb = new android.app.Notification.Builder(MainActivity.this, "done");
+                          } else nb = new android.app.Notification.Builder(MainActivity.this);
+                          Intent open = new Intent(MainActivity.this, MainActivity.class);
+                          open.setAction(Intent.ACTION_MAIN);
+                          open.addCategory(Intent.CATEGORY_LAUNCHER);
+                          android.app.PendingIntent pi = android.app.PendingIntent.getActivity(MainActivity.this, 1, open,
+                              android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
+                          nb.setSmallIcon(getApplicationInfo().icon).setContentTitle("笔记已写好").setContentText(title)
+                            .setAutoCancel(true).setContentIntent(pi);
+                          nm.notify(2, nb.build());
+                      } catch (Exception ignored) { }
                   }
 
                   @JavascriptInterface
@@ -1505,7 +1527,7 @@ jobs:
 
           <div class="page" id="pg-lib"><div class="wrap">
             <h1 class="hd">笔记库</h1>
-            <div class="search"><i class="ic" data-fb="">search</i><input id="libQ" placeholder="按标题搜索笔记"></div>
+            <div class="search"><i class="ic" data-fb="">search</i><input id="libQ" placeholder="搜索标题或正文"></div>
             <div id="hist"></div>
           </div></div>
 
@@ -1870,7 +1892,7 @@ jobs:
                 md += "\n\n---\n来源：https://www.bilibili.com/video/" + v.bvid + "?p=" + v.p + "\n";
               }
               const item = { title: v.title, bvid: v.bvid, p: v.p, md, srt, kind: subOnly ? "sub" : "note", time: Date.now() };
-              saveHist(item); show(item);
+              saveHist(item); show(item); try { if (HAS_NATIVE && Native.notifyDone) Native.notifyDone(item.title || "笔记"); } catch (e) {}
               log("完成！", "o");
             } catch (e) {
               log("出错了：" + e.message, "e");
@@ -2247,7 +2269,7 @@ jobs:
                 md += "\n\n---\n来源：https://www.bilibili.com/video/" + v.bvid + "?p=" + v.p + "\n";
               }
               const item = { title: v.title, bvid: v.bvid, p: v.p, md, srt, kind: subOnly ? "sub" : "note", time: Date.now(), imgs: frames.map(f => f.name) };
-              saveHist(item); show(item);
+              saveHist(item); show(item); try { if (HAS_NATIVE && Native.notifyDone) Native.notifyDone(item.title || "笔记"); } catch (e) {}
               log("完成！", "o");
             } catch (e) {
               log("出错了：" + e.message, "e");
@@ -2410,7 +2432,7 @@ jobs:
                   calls: CAP, vers: [{ md, note: "首次生成", time }], cur: 0
                 });
               }
-              saveHist(item); show(item);
+              saveHist(item); show(item); try { if (HAS_NATIVE && Native.notifyDone) Native.notifyDone(item.title || "笔记"); } catch (e) {}
               log("完成！", "o");
             } catch (e) {
               log("出错了：" + e.message, "e");
@@ -2496,7 +2518,7 @@ jobs:
                   calls: CAP, vers: [{ md, note: "首次生成", time }], cur: 0
                 });
               }
-              saveHist(item); show(item);
+              saveHist(item); show(item); try { if (HAS_NATIVE && Native.notifyDone) Native.notifyDone(item.title || "笔记"); } catch (e) {}
               if (HAS_NATIVE) Native.taskDel(st.id);
               log("完成！", "o");
             } catch (e) {
@@ -2832,8 +2854,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.7.8";
+          const APP_VER = "1.7.9";
           const CHANGELOG = [
+            ["1.7.9", "笔记库可搜索正文；笔记可设置分类并按分类筛选；生成完成发系统通知；设置里新增导出备份、从备份恢复、检查更新（每天自动检查一次）"],
             ["1.7.8", "修复黑夜模式下点输入框弹出键盘时短暂露出大片白色区域：窗口和网页底色改为跟随主题"],
             ["1.7.7", "增加界面动效：页面与卡片依次淡入、按钮按下回弹、进度当前步骤脉冲、提示条滑入、弹出菜单缩放；系统开启“减少动画”时自动关闭"],
             ["1.7.6", "应用图标换成蓝色笔记页；界面细调：标签贴近输入框、分组间距加大、主按钮更突出、数字等宽、列表卡片更清爽"],
@@ -3033,6 +3056,87 @@ jobs:
               const sw = $("autoClipSw"); sw.checked = on();
               sw.onchange = () => localStorage.setItem("vtn_autoclip", sw.checked ? "1" : "0");
             }
+          })();
+          // v1.7.9：分类、备份恢复、检查更新
+          (function () {
+            const TAGS = ["物理", "化学", "生物", "数学", "其他"];
+            const lib = $("libQ") && $("libQ").closest(".search");
+            if (lib) {
+              const bar = document.createElement("div"); bar.id = "tagBar";
+              bar.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px";
+              function drawBar() {
+                bar.innerHTML = "";
+                const used = Array.from(new Set(loadHist().map(x => x.tag).filter(Boolean)));
+                const all = [""].concat(TAGS.filter(t => used.includes(t)), used.filter(t => !TAGS.includes(t)));
+                all.forEach(t => {
+                  const b = document.createElement("button"); b.className = "chip5" + ((window.__tagF || "") === t ? " on" : "");
+                  b.textContent = t || "全部";
+                  b.onclick = () => { window.__tagF = t; drawBar(); drawHist(); };
+                  bar.appendChild(b);
+                });
+                bar.style.display = used.length ? "flex" : "none";
+              }
+              lib.after(bar); drawBar(); window.__drawTagBar = drawBar;
+            }
+            window.__setTag = function (it) {
+              const t = prompt("分类名称（如 物理、化学、生物；留空=取消分类）", it.tag || "");
+              if (t === null) return;
+              const h = loadHist(); const x = h.find(y => y.time === it.time); if (!x) return;
+              x.tag = t.trim().slice(0, 12); if (!x.tag) delete x.tag;
+              try { localStorage.setItem("vtn_hist", JSON.stringify(h)); } catch (e) { snack("保存失败：空间不足"); return; }
+              if (window.__drawTagBar) window.__drawTagBar(); drawHist(); snack(x.tag ? "已归入 " + x.tag : "已取消分类");
+            };
+            const about = $("verTxt") && $("verTxt").closest(".grp");
+            if (!about) return;
+            const gt = document.createElement("div"); gt.className = "gt"; gt.textContent = "备份与更新";
+            const g = document.createElement("div"); g.className = "grp";
+            g.innerHTML = '<div class="li" style="display:flex;gap:10px;flex-wrap:wrap;padding:10px 0">' +
+              '<button class="sec" id="bkOut">导出备份</button><button class="sec" id="bkIn">从备份恢复</button>' +
+              '<button class="sec" id="updBtn">检查更新</button>' +
+              '<input type="file" id="bkFile" accept=".json,application/json" style="display:none"></div>' +
+              '<p class="mute" id="updTip" style="margin:4px 0 8px">备份包含笔记正文、分类和设置（不含 API Key 和截图图片）</p>';
+            about.before(gt, g);
+            const SKIP = ["vtn_set", "vtn_bg", "vtn_lastclip"];
+            $("bkOut").onclick = () => {
+              const data = { app: "vtn", ver: APP_VER, time: Date.now(), ls: {} };
+              for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("vtn_") && !SKIP.includes(k)) data.ls[k] = localStorage.getItem(k); }
+              const d = new Date(), nm = "视频笔记备份_" + d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") + ".json";
+              try { const r = HAS_NATIVE && Native.saveFile ? Native.saveFile(nm, JSON.stringify(data)) : ""; snack(r && String(r).startsWith("err") ? "导出失败：" + r : "已导出到下载目录：" + nm); }
+              catch (e) { snack("导出失败：" + e.message); }
+            };
+            $("bkIn").onclick = () => $("bkFile").click();
+            $("bkFile").onchange = e => {
+              const f = e.target.files && e.target.files[0]; if (!f) return;
+              const rd = new FileReader();
+              rd.onload = () => {
+                let d; try { d = JSON.parse(rd.result); } catch (x) { snack("不是有效的备份文件"); return; }
+                if (!d || d.app !== "vtn" || !d.ls) { snack("不是视频笔记的备份文件"); return; }
+                let cur = loadHist(), inc = []; try { inc = JSON.parse(d.ls.vtn_hist || "[]"); } catch (x) {}
+                const seen = new Set(cur.map(x => x.time)); let n = 0;
+                inc.forEach(x => { if (!seen.has(x.time)) { cur.push(x); n++; } });
+                cur.sort((a, b) => b.time - a.time);
+                if (!confirm("备份里有 " + inc.length + " 篇笔记，其中 " + n + " 篇是新的。合并进笔记库？（不会删除现有笔记）")) return;
+                try { localStorage.setItem("vtn_hist", JSON.stringify(cur)); } catch (x) { snack("空间不足，恢复失败"); return; }
+                if (window.__drawTagBar) window.__drawTagBar(); drawHist(); snack("已恢复 " + n + " 篇笔记");
+              };
+              rd.readAsText(f); e.target.value = "";
+            };
+            function vcmp(a, b) { a = a.split(".").map(Number); b = b.split(".").map(Number); for (let i = 0; i < 3; i++) { if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) - (b[i] || 0); } return 0; }
+            async function checkUpd(manual) {
+              const tip = $("updTip");
+              try {
+                const r = await fetch("https://api.github.com/repos/jlynolson53-hue/VideoToNote-Lite/releases/latest", { cache: "no-store" });
+                if (!r.ok) throw new Error("HTTP " + r.status);
+                const j = await r.json(); const v = String(j.tag_name || j.name || "").replace(/^[^\d]*/, "");
+                localStorage.setItem("vtn_upd_ts", String(Date.now()));
+                if (v && vcmp(v, APP_VER) > 0) {
+                  tip.textContent = "发现新版本 " + v + "（当前 " + APP_VER + "）";
+                  if (confirm("发现新版本 " + v + "，当前是 " + APP_VER + "。现在去下载？")) { const u = j.html_url || "https://github.com/jlynolson53-hue/VideoToNote-Lite/releases/latest"; HAS_NATIVE && Native.openUrl ? Native.openUrl(u) : open(u); }
+                } else if (manual) { tip.textContent = "已是最新版本（" + APP_VER + "）"; snack("已是最新版本"); }
+              } catch (e) { if (manual) snack("检查更新失败：" + e.message); }
+            }
+            $("updBtn").onclick = () => checkUpd(true);
+            if (Date.now() - parseInt(localStorage.getItem("vtn_upd_ts") || "0") > 86400000) setTimeout(() => checkUpd(false), 3000);
           })();
           // v1.6.7：自定义背景（vtn_bg）
           (function () {
@@ -3240,7 +3344,7 @@ jobs:
             const h = loadHist(), dir = HAS_NATIVE ? Native.filesDir() : "";
             box.innerHTML = ""; box.className = "";
             if (!h.length) { box.innerHTML = '<div class="empty5"><i class="ic" data-fb="">menu_book</i><div>还没有笔记</div><div class="mute">在“生成”页粘贴 B 站链接，生成的笔记会保存在这里</div></div>'; iconFallback(box); return; }
-            const list = h.filter(it => !q || String(it.title || "").toLowerCase().includes(q));
+            const TF = window.__tagF || ""; const list = h.filter(it => (!TF || (it.tag || "") === TF) && (!q || String(it.title || "").toLowerCase().includes(q) || String(it.md || "").toLowerCase().includes(q) || String(it.tag || "").toLowerCase().includes(q)));
             if (!list.length) { box.innerHTML = '<div class="empty5"><i class="ic" data-fb="">search_off</i><div>没有找到相关笔记</div></div>'; iconFallback(box); return; }
             list.forEach(it => {
               let vers = 1;
@@ -3249,13 +3353,14 @@ jobs:
               const th = (it.imgs && it.imgs[0]) ? '<img class="th" loading="lazy" src="file://' + dir + '/img/' + it.imgs[0] + '">' : '<div class="th"><i class="ic" data-fb="">' + (it.kind === "sub" ? "subtitles" : "description") + '</i></div>';
               d.innerHTML = th + '<div class="nb"><div class="nt"></div><div class="mute"></div></div><button class="icon nm"><i class="ic" data-fb="⋮">more_vert</i></button>';
               d.querySelector(".nt").textContent = it.title;
-              d.querySelector(".mute").textContent = new Date(it.time).toLocaleString() + (it.kind === "sub" ? " · 字幕" : " · " + vers + " 个版本");
+              d.querySelector(".mute").textContent = (it.tag ? "[" + it.tag + "] " : "") + new Date(it.time).toLocaleString() + (it.kind === "sub" ? " · 字幕" : " · " + vers + " 个版本");
               d.onclick = () => show(it);
               const menu = e => {
                 e.preventDefault(); e.stopPropagation();
                 openMenu(d.querySelector(".nm"), [
                   ["打开", "open_in_new", () => show(it)],
                   ["导出图文 MD", "image", () => { show(it); setTimeout(() => $("v5md").click(), 150); }],
+                  ["设置分类", "label", () => window.__setTag && window.__setTag(it)],
                   ["删除", "delete", () => {
                     if (!confirm("删除这篇笔记？")) return;
                     localStorage.setItem("vtn_hist", JSON.stringify(loadHist().filter(x => x.time !== it.time)));
