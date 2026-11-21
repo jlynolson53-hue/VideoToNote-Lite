@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 42
-                  versionName "1.8.5"
+                  versionCode 43
+                  versionName "1.8.6"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -2886,8 +2886,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.8.5";
+          const APP_VER = "1.8.6";
           const CHANGELOG = [
+            ["1.8.6", "去掉阅读页的单栏/双栏切换，阅读恢复单栏；新增导出 PDF：可选单栏或双栏（教材式，每页左右两栏）、字号、是否保留截图、页边距，带页面预览；首页有标题栏；图片、公式、表格不会被切断"],
             ["1.8.5", "笔记详情可切换单栏或双栏排版（像教材那样分两栏，中间有分隔线），选择会被记住；图片、公式、表格不会被拆到两栏"],
             ["1.8.4", "支持 B 站合集：粘贴合集里任意一集的链接，会列出整个合集，可勾选多集批量生成，做过的标“已生成”"],
             ["1.8.3", "多 P 列表去掉系统勾选框：点整行即可选中，选中时整行变色加蓝边，左侧圆点带弹跳打勾动效；正在生成的那一 P 有呼吸光圈"],
@@ -3317,6 +3318,7 @@ jobs:
                 openMenu(d.querySelector(".nm"), [
                   ["打开", "open_in_new", () => show(it)],
                   ["导出图文 MD", "image", () => { show(it); setTimeout(() => $("v5md").click(), 150); }],
+                  ["导出 PDF", "picture_as_pdf", () => window.__pdf && window.__pdf(it)],
                   ["设置分类", "label", () => window.__setTag && window.__setTag(it)],
                   ["删除", "delete", () => {
                     if (window.__delNote) { window.__delNote(it); return; }
@@ -4001,23 +4003,66 @@ jobs:
             }
             inp.addEventListener("input", judge); setTimeout(judge, 1000);
           })();
-          // v1.8.5：笔记分栏阅读（vtn_cols）
+          // v1.8.6：导出 PDF（系统打印 → 保存为 PDF；可选单栏/双栏）（vtn_pdf）
           (function () {
-            const pv = $("preview"), tools = $("readTools"); if (!pv || !tools) return;
-            const st = document.createElement("style"); st.textContent = "#preview.cols{column-count:2;column-gap:36px;column-rule:1px solid var(--outline-variant,rgba(128,128,128,.28));column-fill:balance}#preview.cols h1{column-span:all;margin-top:0}#preview.cols img,#preview.cols figure,#preview.cols table,#preview.cols pre,#preview.cols blockquote,#preview.cols .katex-display,#preview.cols li{break-inside:avoid}#preview.cols h2,#preview.cols h3{break-after:avoid}#preview.cols img{max-width:100%}#preview{transition:opacity .2s}#preview.swap{opacity:0}@media (max-width:700px){#preview.cols{column-count:1;column-rule:none}}#readTools .chip5.on{background:var(--secondary-container);color:var(--on-secondary-container);border-color:transparent}"; document.head.appendChild(st);
-            const b = document.createElement("button"); b.className = "chip5"; b.dataset.a = "cols";
-            const on = () => localStorage.getItem("vtn_cols") === "1";
-            function apply(anim) {
-              const f = () => { pv.classList.toggle("cols", on()); b.classList.toggle("on", on()); b.textContent = on() ? "双栏" : "单栏"; };
-              if (!anim) { f(); return; }
-              pv.classList.add("swap"); setTimeout(() => { f(); pv.classList.remove("swap"); }, 180);
+            const st = document.createElement("style"); st.textContent = ".pdfS .seg{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}.pdfS .lb{font-size:13px;color:var(--on-surface-variant);margin-top:4px}.pdfS .seg .chip5{flex:1;justify-content:center;min-width:72px}.pdfS .pvw{display:flex;justify-content:center;margin:4px 0 12px}.pdfS .pg{width:120px;height:170px;background:#fff;border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:12px 10px;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;transition:all .3s}.pdfS .pg .hd{height:9px;width:70%;background:#333;border-radius:2px;margin-bottom:4px}.pdfS .pg .bd{flex:1;display:flex;gap:7px}.pdfS .pg .cl{flex:1;display:flex;flex-direction:column;gap:4px}.pdfS .pg .cl i{display:block;height:3px;background:#bbb;border-radius:2px}.pdfS .pg .cl i.im{height:22px;background:#cfe3ff}.pdfS .pg.one .cl+.cl{display:none}.pdfS .pg.two .cl+.cl{border-left:1px solid #ddd;padding-left:6px}.pdfS .pg.noimg i.im{display:none}@media print{#v5print.pp{color:#222;line-height:1.62;font-family:'Noto Serif CJK SC','Source Han Serif SC','Songti SC',serif}#v5print.pp .ptl{column-span:all;border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}#v5print.pp .ptl b{display:block;font-size:1.55em;line-height:1.3;font-family:sans-serif}#v5print.pp .ptl span{font-size:.8em;color:#666}#v5print.pp.c2 .pbd{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb}#v5print.pp .pbd>h1:first-child{display:none}#v5print.pp h1{column-span:all;font-size:1.35em;margin:12pt 0 6pt}#v5print.pp h2{font-size:1.18em;margin:10pt 0 4pt;padding-left:5pt;border-left:3pt solid #0A84FF}#v5print.pp h3{font-size:1.05em;margin:8pt 0 3pt}#v5print.pp h1,#v5print.pp h2,#v5print.pp h3{break-after:avoid;page-break-after:avoid}#v5print.pp p,#v5print.pp li{orphans:2;widows:2;margin:3pt 0}#v5print.pp img,#v5print.pp figure,#v5print.pp table,#v5print.pp pre,#v5print.pp blockquote,#v5print.pp .katex-display,#v5print.pp .shot{break-inside:avoid;page-break-inside:avoid}#v5print.pp img{max-width:100%;height:auto;border-radius:3pt}#v5print.pp .katex-display{overflow:hidden;margin:5pt 0}#v5print.pp.c2 .katex-display{font-size:.9em}#v5print.pp pre{white-space:pre-wrap;word-break:break-all;font-size:.85em}#v5print.pp table{font-size:.88em;width:100%;border-collapse:collapse}#v5print.pp blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}#v5print.pp.noimg img,#v5print.pp.noimg figure,#v5print.pp.noimg .shot{display:none!important}}"; document.head.appendChild(st);
+            const pst = document.createElement("style"); document.head.appendChild(pst);
+            const D = { col: "2", fs: "m", img: "1", mg: "n" };
+            const opt = () => { try { return Object.assign({}, D, JSON.parse(localStorage.getItem("vtn_pdf") || "{}")); } catch (e) { return Object.assign({}, D); } };
+            const FS = { s: "10pt", m: "11.5pt", l: "13pt" }, MG = { n: "16mm 14mm 16mm 14mm", w: "10mm 9mm 12mm 9mm" };
+            function open() {
+              if (!current) { snack("先打开一篇笔记"); return; }
+              const o = opt();
+              const m = document.createElement("div"); m.className = "vSheetM";
+              m.innerHTML = '<div class="vSheet pdfS"><div class="grab"></div><h3>导出 PDF</h3><div class="mute ttl" style="margin-bottom:10px"></div>' +
+                '<div class="pvw"><div class="pg"><div class="hd"></div><div class="bd"><div class="cl"><i></i><i></i><i class="im"></i><i></i><i></i><i></i><i></i></div><div class="cl"><i></i><i></i><i></i><i class="im"></i><i></i><i></i></div></div></div></div>' +
+                '<div class="lb">排版</div><div class="seg" data-k="col"><button class="chip5" data-v="1">单栏</button><button class="chip5" data-v="2">双栏（教材式）</button></div>' +
+                '<div class="lb">字号</div><div class="seg" data-k="fs"><button class="chip5" data-v="s">小</button><button class="chip5" data-v="m">中</button><button class="chip5" data-v="l">大</button></div>' +
+                '<div class="lb">截图</div><div class="seg" data-k="img"><button class="chip5" data-v="1">保留</button><button class="chip5" data-v="0">不要（更省纸）</button></div>' +
+                '<div class="lb">页边距</div><div class="seg" data-k="mg"><button class="chip5" data-v="n">标准</button><button class="chip5" data-v="w">窄</button></div>' +
+                '<div class="mute" style="font-size:13px;line-height:1.6;margin-top:2px">下一步会打开系统打印，在上方“选择打印机”里选“另存为 PDF”，再点 PDF 按钮保存。</div>' +
+                '<div class="acts"><button class="sec" data-a="x">取消</button><button class="big" data-a="go" style="flex:1">下一步</button></div></div>';
+              m.querySelector(".ttl").textContent = "《" + String(current.title || "").slice(0, 30) + "》";
+              const pg = m.querySelector(".pg");
+              function paint() {
+                m.querySelectorAll(".seg").forEach(sg => sg.querySelectorAll("button").forEach(b => b.classList.toggle("on", o[sg.dataset.k] === b.dataset.v)));
+                pg.className = "pg " + (o.col === "2" ? "two" : "one") + (o.img === "0" ? " noimg" : "");
+              }
+              m.querySelectorAll(".seg button").forEach(b => b.onclick = () => { o[b.closest(".seg").dataset.k] = b.dataset.v; paint(); });
+              paint();
+              const close = () => { m.remove(); if (window.__sheetClose === close) window.__sheetClose = null; };
+              m.onclick = e => { if (e.target === m) close(); };
+              m.querySelector('[data-a="x"]').onclick = close;
+              m.querySelector('[data-a="go"]').onclick = async () => { localStorage.setItem("vtn_pdf", JSON.stringify(o)); close(); await go(o); };
+              window.__sheetClose = close; document.body.appendChild(m);
             }
-            b.onclick = () => {
-              localStorage.setItem("vtn_cols", on() ? "0" : "1"); apply(true);
-              snack(on() ? (innerWidth <= 700 ? "已开启分栏（屏幕太窄，横屏或平板上才会显示两栏）" : "已改为两栏排版") : "已改为单栏排版");
-            };
-            const s0 = tools.querySelector('[data-a="s"]'); s0 ? s0.before(b) : tools.appendChild(b);
-            apply(false);
+            async function go(o) {
+              if (!HAS_NATIVE || !Native.printPdf2) { snack("请在安卓应用里使用"); return; }
+              snack("正在排版，图片和公式加载中…");
+              try {
+                await fillPrint(curMd());
+                const pa = $("v5print");
+                const body = document.createElement("div"); body.className = "pbd";
+                while (pa.firstChild) body.appendChild(pa.firstChild);
+                const t = document.createElement("div"); t.className = "ptl";
+                t.innerHTML = "<b></b><span></span>";
+                t.querySelector("b").textContent = current.title || "笔记";
+                t.querySelector("span").textContent = (current.tag ? current.tag + " · " : "") + new Date(current.time || Date.now()).toLocaleDateString() + (current.bvid ? " · " + current.bvid : "");
+                pa.append(t, body);
+                pa.className = "pp" + (o.col === "2" ? " c2" : "") + (o.img === "0" ? " noimg" : "");
+                pa.style.fontSize = FS[o.fs] || FS.m;
+                pst.textContent = "@page{size:A4;margin:" + (MG[o.mg] || MG.n) + "}";
+                await new Promise(r => setTimeout(r, 250));
+                let vt = ""; try { vt = verTag(); } catch (e) {}
+                Native.printPdf2(safeName(current.title || "笔记") + vt + (o.col === "2" ? "_双栏" : ""));
+              } catch (e) { snack("准备 PDF 失败：" + e.message); }
+            }
+            window.__pdf = function (it) { if (it && (!current || current.time !== it.time)) { show(it); setTimeout(open, 200); } else open(); };
+            const tools = $("readTools");
+            if (tools) {
+              const b = document.createElement("button"); b.className = "chip5"; b.textContent = "导出 PDF"; b.onclick = () => window.__pdf();
+              const s0 = tools.querySelector('[data-a="s"]'); s0 ? s0.before(b) : tools.appendChild(b);
+            }
           })();
           iconFallback();
           </script>
