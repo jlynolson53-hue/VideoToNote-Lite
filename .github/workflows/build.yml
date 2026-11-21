@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 41
-                  versionName "1.8.4"
+                  versionCode 42
+                  versionName "1.8.5"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -2886,8 +2886,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.8.4";
+          const APP_VER = "1.8.5";
           const CHANGELOG = [
+            ["1.8.5", "笔记详情可切换单栏或双栏排版（像教材那样分两栏，中间有分隔线），选择会被记住；图片、公式、表格不会被拆到两栏"],
             ["1.8.4", "支持 B 站合集：粘贴合集里任意一集的链接，会列出整个合集，可勾选多集批量生成，做过的标“已生成”"],
             ["1.8.3", "多 P 列表去掉系统勾选框：点整行即可选中，选中时整行变色加蓝边，左侧圆点带弹跳打勾动效；正在生成的那一 P 有呼吸光圈"],
             ["1.8.2", "所有确认框改成应用内样式（不再出现“网址为 file://”）；删除可撤销；笔记库可排序、长按或点“选择”进入多选，可批量分类、删除、导出；多 P 视频会列出分 P，可勾选后批量生成；笔记详情新增页内搜索、目录、字号、阅读进度；出错时给出原因和“重试”；修复 1.8.1 分类标签和高亮不显示"],
@@ -3999,6 +4000,24 @@ jobs:
               }
             }
             inp.addEventListener("input", judge); setTimeout(judge, 1000);
+          })();
+          // v1.8.5：笔记分栏阅读（vtn_cols）
+          (function () {
+            const pv = $("preview"), tools = $("readTools"); if (!pv || !tools) return;
+            const st = document.createElement("style"); st.textContent = "#preview.cols{column-count:2;column-gap:36px;column-rule:1px solid var(--outline-variant,rgba(128,128,128,.28));column-fill:balance}#preview.cols h1{column-span:all;margin-top:0}#preview.cols img,#preview.cols figure,#preview.cols table,#preview.cols pre,#preview.cols blockquote,#preview.cols .katex-display,#preview.cols li{break-inside:avoid}#preview.cols h2,#preview.cols h3{break-after:avoid}#preview.cols img{max-width:100%}#preview{transition:opacity .2s}#preview.swap{opacity:0}@media (max-width:700px){#preview.cols{column-count:1;column-rule:none}}#readTools .chip5.on{background:var(--secondary-container);color:var(--on-secondary-container);border-color:transparent}"; document.head.appendChild(st);
+            const b = document.createElement("button"); b.className = "chip5"; b.dataset.a = "cols";
+            const on = () => localStorage.getItem("vtn_cols") === "1";
+            function apply(anim) {
+              const f = () => { pv.classList.toggle("cols", on()); b.classList.toggle("on", on()); b.textContent = on() ? "双栏" : "单栏"; };
+              if (!anim) { f(); return; }
+              pv.classList.add("swap"); setTimeout(() => { f(); pv.classList.remove("swap"); }, 180);
+            }
+            b.onclick = () => {
+              localStorage.setItem("vtn_cols", on() ? "0" : "1"); apply(true);
+              snack(on() ? (innerWidth <= 700 ? "已开启分栏（屏幕太窄，横屏或平板上才会显示两栏）" : "已改为两栏排版") : "已改为单栏排版");
+            };
+            const s0 = tools.querySelector('[data-a="s"]'); s0 ? s0.before(b) : tools.appendChild(b);
+            apply(false);
           })();
           iconFallback();
           </script>
