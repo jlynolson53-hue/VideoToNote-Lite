@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 43
-                  versionName "1.8.6"
+                  versionCode 44
+                  versionName "1.8.7"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -395,6 +395,34 @@ jobs:
               <background android:drawable="@drawable/ic_launcher_bg" />
               <foreground android:drawable="@mipmap/ic_launcher_fg" />
           </adaptive-icon>
+          VTN_EOF
+          mkdir -p app/src/main/java/android/print
+          cat > app/src/main/java/android/print/PdfPrint.java <<'VTN_EOF'
+          package android.print;
+
+          import android.os.CancellationSignal;
+          import android.os.ParcelFileDescriptor;
+          import java.io.File;
+
+          // v1.8.7：不经过系统打印界面，直接把 WebView 写成 PDF
+          public class PdfPrint {
+              public interface Cb { void ok(File f); void err(String e); }
+              public static void print(final PrintDocumentAdapter ad, final PrintAttributes attr, final File out, final Cb cb) {
+                  ad.onLayout(null, attr, null, new PrintDocumentAdapter.LayoutResultCallback() {
+                      @Override public void onLayoutFinished(PrintDocumentInfo info, boolean changed) {
+                          try {
+                              final ParcelFileDescriptor fd = ParcelFileDescriptor.open(out,
+                                  ParcelFileDescriptor.MODE_CREATE | ParcelFileDescriptor.MODE_TRUNCATE | ParcelFileDescriptor.MODE_READ_WRITE);
+                              ad.onWrite(new PageRange[]{ PageRange.ALL_PAGES }, fd, new CancellationSignal(), new PrintDocumentAdapter.WriteResultCallback() {
+                                  @Override public void onWriteFinished(PageRange[] pages) { try { fd.close(); } catch (Exception ignored) { } cb.ok(out); }
+                                  @Override public void onWriteFailed(CharSequence e) { try { fd.close(); } catch (Exception ignored) { } cb.err(String.valueOf(e)); }
+                              });
+                          } catch (Exception e) { cb.err(e.toString()); }
+                      }
+                      @Override public void onLayoutFailed(CharSequence e) { cb.err(String.valueOf(e)); }
+                  }, null);
+              }
+          }
           VTN_EOF
           mkdir -p app/src/main/java/com/vtn/lite
           cat > app/src/main/java/com/vtn/lite/MainActivity.java <<'VTN_EOF'
@@ -976,6 +1004,74 @@ jobs:
 
                   // ===== v1.5：导出 PDF =====
 
+                  // ===== v1.8.7：Paged.js 分页 + 静默写 PDF =====
+                  class PdfJs {
+                      final String id, name; final WebView pw; boolean fin = false;
+                      PdfJs(String id, String name, WebView pw) { this.id = id; this.name = name; this.pw = pw; }
+                      @JavascriptInterface public void prog(String m) {
+                          final String js = "window.__nativeProg&&window.__nativeProg(" + JSONObject.quote(id) + "," + JSONObject.quote(m) + ")";
+                          runOnUiThread(() -> web.evaluateJavascript(js, null));
+                      }
+                      void end() { runOnUiThread(() -> { try { ((android.view.ViewGroup) pw.getParent()).removeView(pw); } catch (Exception ignored) { } try { pw.destroy(); } catch (Exception ignored) { } }); }
+                      @JavascriptInterface public void fail(String m) {
+                          if (fin) return; fin = true;
+                          JSONObject r = new JSONObject(); try { r.put("error", "排版失败：" + m); } catch (Exception ignored) { }
+                          reply(id, r); end();
+                      }
+                      @JavascriptInterface public void done(final int pages) {
+                          if (fin) return; fin = true;
+                          runOnUiThread(() -> {
+                              try {
+                                  prog("正在写入 PDF（共 " + pages + " 页）…");
+                                  PrintAttributes at = new PrintAttributes.Builder()
+                                      .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                                      .setResolution(new PrintAttributes.Resolution("pdf", "pdf", 600, 600))
+                                      .setMinMargins(PrintAttributes.Margins.NO_MARGINS).build();
+                                  final File out = new File(getCacheDir(), "vtn_export.pdf");
+                                  android.print.PdfPrint.print(pw.createPrintDocumentAdapter(name), at, out, new android.print.PdfPrint.Cb() {
+                                      @Override public void ok(File f) {
+                                          JSONObject r = new JSONObject();
+                                          try { r.put("msg", saveBytes(name, readFile(f), "application/pdf")); r.put("pages", pages); f.delete(); }
+                                          catch (Exception e) { try { r.put("error", "保存失败：" + e.getMessage()); } catch (Exception ignored) { } }
+                                          reply(id, r); end();
+                                      }
+                                      @Override public void err(String e) {
+                                          JSONObject r = new JSONObject(); try { r.put("error", "写入 PDF 失败：" + e); } catch (Exception ignored) { }
+                                          reply(id, r); end();
+                                      }
+                                  });
+                              } catch (Throwable e) {
+                                  JSONObject r = new JSONObject(); try { r.put("error", "写入 PDF 失败：" + e); } catch (Exception ignored) { }
+                                  reply(id, r); end();
+                              }
+                          });
+                      }
+                  }
+
+                  @JavascriptInterface
+                  public void makePdf3(final String id, final String html, final String name) {
+                      runOnUiThread(() -> {
+                          try {
+                              final WebView pw = new WebView(MainActivity.this);
+                              WebSettings ps = pw.getSettings();
+                              ps.setJavaScriptEnabled(true);
+                              ps.setAllowFileAccess(true);
+                              ps.setAllowFileAccessFromFileURLs(true);
+                              ps.setAllowUniversalAccessFromFileURLs(true);
+                              pw.setBackgroundColor(0xFFFFFFFF);
+                              pw.setAlpha(0f);
+                              pw.setTranslationX(-6000f);
+                              android.view.ViewGroup root = (android.view.ViewGroup) getWindow().getDecorView();
+                              root.addView(pw, new android.widget.FrameLayout.LayoutParams(1240, 1754));
+                              pw.addJavascriptInterface(new PdfJs(id, name, pw), "PdfBridge");
+                              pw.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null);
+                          } catch (Throwable e) {
+                              JSONObject r = new JSONObject(); try { r.put("error", "无法创建排版页面：" + e); } catch (Exception ignored) { }
+                              reply(id, r);
+                          }
+                      });
+                  }
+
                   private String saveBytes(String name, byte[] data, String mime) throws Exception {
                       if (Build.VERSION.SDK_INT >= 29) {
                           ContentValues v = new ContentValues();
@@ -1249,6 +1345,8 @@ jobs:
           }
           VTN_EOF
           mkdir -p app/src/main/assets
+          curl -fsSL --retry 3 https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.js -o app/src/main/assets/paged.polyfill.js || curl -fsSL --retry 3 https://cdn.jsdelivr.net/npm/pagedjs@0.4.3/dist/paged.polyfill.js -o app/src/main/assets/paged.polyfill.js
+          test -s app/src/main/assets/paged.polyfill.js
           cat > app/src/main/assets/index.html <<'VTN_EOF'
           <!DOCTYPE html>
           <html lang="zh-CN">
@@ -2886,8 +2984,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.8.6";
+          const APP_VER = "1.8.7";
           const CHANGELOG = [
+            ["1.8.7", "导出 PDF 重做：用 Paged.js 按 A4 分页，App 直接生成 PDF 文件（不再弹系统打印），页边距、双栏、页码都由 App 控制，图片和公式不跨页；修复导出面板里已选按钮变成空白"],
             ["1.8.6", "去掉阅读页的单栏/双栏切换，阅读恢复单栏；新增导出 PDF：可选单栏或双栏（教材式，每页左右两栏）、字号、是否保留截图、页边距，带页面预览；首页有标题栏；图片、公式、表格不会被切断"],
             ["1.8.5", "笔记详情可切换单栏或双栏排版（像教材那样分两栏，中间有分隔线），选择会被记住；图片、公式、表格不会被拆到两栏"],
             ["1.8.4", "支持 B 站合集：粘贴合集里任意一集的链接，会列出整个合集，可勾选多集批量生成，做过的标“已生成”"],
@@ -4005,7 +4104,7 @@ jobs:
           })();
           // v1.8.6：导出 PDF（系统打印 → 保存为 PDF；可选单栏/双栏）（vtn_pdf）
           (function () {
-            const st = document.createElement("style"); st.textContent = ".pdfS .seg{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}.pdfS .lb{font-size:13px;color:var(--on-surface-variant);margin-top:4px}.pdfS .seg .chip5{flex:1;justify-content:center;min-width:72px}.pdfS .pvw{display:flex;justify-content:center;margin:4px 0 12px}.pdfS .pg{width:120px;height:170px;background:#fff;border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:12px 10px;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;transition:all .3s}.pdfS .pg .hd{height:9px;width:70%;background:#333;border-radius:2px;margin-bottom:4px}.pdfS .pg .bd{flex:1;display:flex;gap:7px}.pdfS .pg .cl{flex:1;display:flex;flex-direction:column;gap:4px}.pdfS .pg .cl i{display:block;height:3px;background:#bbb;border-radius:2px}.pdfS .pg .cl i.im{height:22px;background:#cfe3ff}.pdfS .pg.one .cl+.cl{display:none}.pdfS .pg.two .cl+.cl{border-left:1px solid #ddd;padding-left:6px}.pdfS .pg.noimg i.im{display:none}@media print{#v5print.pp{color:#222;line-height:1.62;font-family:'Noto Serif CJK SC','Source Han Serif SC','Songti SC',serif}#v5print.pp .ptl{column-span:all;border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}#v5print.pp .ptl b{display:block;font-size:1.55em;line-height:1.3;font-family:sans-serif}#v5print.pp .ptl span{font-size:.8em;color:#666}#v5print.pp.c2 .pbd{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb}#v5print.pp .pbd>h1:first-child{display:none}#v5print.pp h1{column-span:all;font-size:1.35em;margin:12pt 0 6pt}#v5print.pp h2{font-size:1.18em;margin:10pt 0 4pt;padding-left:5pt;border-left:3pt solid #0A84FF}#v5print.pp h3{font-size:1.05em;margin:8pt 0 3pt}#v5print.pp h1,#v5print.pp h2,#v5print.pp h3{break-after:avoid;page-break-after:avoid}#v5print.pp p,#v5print.pp li{orphans:2;widows:2;margin:3pt 0}#v5print.pp img,#v5print.pp figure,#v5print.pp table,#v5print.pp pre,#v5print.pp blockquote,#v5print.pp .katex-display,#v5print.pp .shot{break-inside:avoid;page-break-inside:avoid}#v5print.pp img{max-width:100%;height:auto;border-radius:3pt}#v5print.pp .katex-display{overflow:hidden;margin:5pt 0}#v5print.pp.c2 .katex-display{font-size:.9em}#v5print.pp pre{white-space:pre-wrap;word-break:break-all;font-size:.85em}#v5print.pp table{font-size:.88em;width:100%;border-collapse:collapse}#v5print.pp blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}#v5print.pp.noimg img,#v5print.pp.noimg figure,#v5print.pp.noimg .shot{display:none!important}}"; document.head.appendChild(st);
+            const st = document.createElement("style"); st.textContent = ".pdfS .seg{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}.pdfS .lb{font-size:13px;color:var(--on-surface-variant);margin-top:4px}.pdfS .seg .chip5{flex:1;justify-content:center;min-width:72px;color:var(--on-surface,#1c1c1e);background:transparent}.pdfS .seg .chip5.on{background:#0A84FF!important;color:#fff!important;border-color:#0A84FF!important;font-weight:600}.pdfS .seg .chip5.on::before{color:#fff}.pdfS .pvw{display:flex;justify-content:center;margin:4px 0 12px}.pdfS .pg{width:120px;height:170px;background:#fff;border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:12px 10px;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;transition:all .3s}.pdfS .pg .hd{height:9px;width:70%;background:#333;border-radius:2px;margin-bottom:4px}.pdfS .pg .bd{flex:1;display:flex;gap:7px}.pdfS .pg .cl{flex:1;display:flex;flex-direction:column;gap:4px}.pdfS .pg .cl i{display:block;height:3px;background:#bbb;border-radius:2px}.pdfS .pg .cl i.im{height:22px;background:#cfe3ff}.pdfS .pg.one .cl+.cl{display:none}.pdfS .pg.two .cl+.cl{border-left:1px solid #ddd;padding-left:6px}.pdfS .pg.noimg i.im{display:none}@media print{#v5print.pp{color:#222;line-height:1.62;font-family:'Noto Serif CJK SC','Source Han Serif SC','Songti SC',serif}#v5print.pp .ptl{column-span:all;border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}#v5print.pp .ptl b{display:block;font-size:1.55em;line-height:1.3;font-family:sans-serif}#v5print.pp .ptl span{font-size:.8em;color:#666}#v5print.pp.c2 .pbd{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb}#v5print.pp .pbd>h1:first-child{display:none}#v5print.pp h1{column-span:all;font-size:1.35em;margin:12pt 0 6pt}#v5print.pp h2{font-size:1.18em;margin:10pt 0 4pt;padding-left:5pt;border-left:3pt solid #0A84FF}#v5print.pp h3{font-size:1.05em;margin:8pt 0 3pt}#v5print.pp h1,#v5print.pp h2,#v5print.pp h3{break-after:avoid;page-break-after:avoid}#v5print.pp p,#v5print.pp li{orphans:2;widows:2;margin:3pt 0}#v5print.pp img,#v5print.pp figure,#v5print.pp table,#v5print.pp pre,#v5print.pp blockquote,#v5print.pp .katex-display,#v5print.pp .shot{break-inside:avoid;page-break-inside:avoid}#v5print.pp img{max-width:100%;height:auto;border-radius:3pt}#v5print.pp .katex-display{overflow:hidden;margin:5pt 0}#v5print.pp.c2 .katex-display{font-size:.9em}#v5print.pp pre{white-space:pre-wrap;word-break:break-all;font-size:.85em}#v5print.pp table{font-size:.88em;width:100%;border-collapse:collapse}#v5print.pp blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}#v5print.pp.noimg img,#v5print.pp.noimg figure,#v5print.pp.noimg .shot{display:none!important}}"; document.head.appendChild(st);
             const pst = document.createElement("style"); document.head.appendChild(pst);
             const D = { col: "2", fs: "m", img: "1", mg: "n" };
             const opt = () => { try { return Object.assign({}, D, JSON.parse(localStorage.getItem("vtn_pdf") || "{}")); } catch (e) { return Object.assign({}, D); } };
@@ -4020,8 +4119,8 @@ jobs:
                 '<div class="lb">字号</div><div class="seg" data-k="fs"><button class="chip5" data-v="s">小</button><button class="chip5" data-v="m">中</button><button class="chip5" data-v="l">大</button></div>' +
                 '<div class="lb">截图</div><div class="seg" data-k="img"><button class="chip5" data-v="1">保留</button><button class="chip5" data-v="0">不要（更省纸）</button></div>' +
                 '<div class="lb">页边距</div><div class="seg" data-k="mg"><button class="chip5" data-v="n">标准</button><button class="chip5" data-v="w">窄</button></div>' +
-                '<div class="mute" style="font-size:13px;line-height:1.6;margin-top:2px">下一步会打开系统打印，在上方“选择打印机”里选“另存为 PDF”，再点 PDF 按钮保存。</div>' +
-                '<div class="acts"><button class="sec" data-a="x">取消</button><button class="big" data-a="go" style="flex:1">下一步</button></div></div>';
+                '<div class="mute" style="font-size:13px;line-height:1.6;margin-top:2px">直接生成 PDF 文件，保存到 下载/VideoToNote，不经过系统打印。页边距、分栏、页码都由 App 排好。</div>' +
+                '<div class="acts"><button class="sec" data-a="x">取消</button><button class="big" data-a="go" style="flex:1">导出</button></div></div>';
               m.querySelector(".ttl").textContent = "《" + String(current.title || "").slice(0, 30) + "》";
               const pg = m.querySelector(".pg");
               function paint() {
@@ -4036,7 +4135,7 @@ jobs:
               m.querySelector('[data-a="go"]').onclick = async () => { localStorage.setItem("vtn_pdf", JSON.stringify(o)); close(); await go(o); };
               window.__sheetClose = close; document.body.appendChild(m);
             }
-            async function go(o) {
+            async function legacyGo(o) {
               if (!HAS_NATIVE || !Native.printPdf2) { snack("请在安卓应用里使用"); return; }
               snack("正在排版，图片和公式加载中…");
               try {
@@ -4056,6 +4155,52 @@ jobs:
                 let vt = ""; try { vt = verTag(); } catch (e) {}
                 Native.printPdf2(safeName(current.title || "笔记") + vt + (o.col === "2" ? "_双栏" : ""));
               } catch (e) { snack("准备 PDF 失败：" + e.message); }
+            }
+            async function go(o) {
+              if (!HAS_NATIVE || !Native.makePdf3) { return legacyGo(o); }
+              const old = window.__nativeProg; let lastStep = "准备内容";
+              const say = m => { lastStep = m; snack(m); };
+              window.__nativeProg = (id, m) => say(m);
+              say("正在准备内容…");
+              try {
+                const tmp = document.createElement("div"); tmp.innerHTML = render(curMd());
+                if (o.img === "0") tmp.querySelectorAll("img,figure,.shot").forEach(x => x.remove());
+                tmp.querySelectorAll("img").forEach(i => { i.removeAttribute("loading"); });
+                const esc2 = t => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+                const sub = (current.tag ? current.tag + " · " : "") + new Date(current.time || Date.now()).toLocaleDateString() + (current.bvid ? " · " + current.bvid : "");
+                const css = "@page{size:A4;margin:" + (MG[o.mg] || MG.n) + ";@bottom-center{content:counter(page) \" / \" counter(pages);font-size:8.5pt;color:#888;font-family:sans-serif}}" +
+                  "html,body{background:#fff;margin:0}body{color:#222;font-size:" + (FS[o.fs] || FS.m) + ";line-height:1.62;font-family:'Noto Serif CJK SC','Source Han Serif SC',serif;text-align:justify}" +
+                  ".ptl{border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}.ptl b{display:block;font-size:1.6em;line-height:1.3;font-family:sans-serif}.ptl span{font-size:.8em;color:#666}" +
+                  ".pbd.c2{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb;column-fill:auto}" +
+                  ".pbd>h1:first-child{display:none}" +
+                  "h1{font-size:1.35em;margin:12pt 0 6pt;font-family:sans-serif}h2{font-size:1.16em;margin:10pt 0 4pt;padding-left:5pt;border-left:3pt solid #0A84FF;font-family:sans-serif}h3{font-size:1.04em;margin:8pt 0 3pt;font-family:sans-serif}" +
+                  "h1,h2,h3{break-after:avoid;page-break-after:avoid}p,li{orphans:2;widows:2;margin:3pt 0}ul,ol{padding-left:1.4em;margin:3pt 0}" +
+                  "img,figure,table,pre,blockquote,.katex-display,.shot{break-inside:avoid;page-break-inside:avoid}" +
+                  "img{max-width:100%;height:auto;border-radius:3pt;display:block;margin:4pt auto}.shot{margin:5pt 0}.shot figcaption{font-size:.8em;color:#777;text-align:center}" +
+                  ".katex-display{overflow:hidden;margin:5pt 0}.c2 .katex-display{font-size:.88em}" +
+                  "pre{white-space:pre-wrap;word-break:break-all;font-size:.85em;background:#f5f5f5;padding:5pt;border-radius:3pt}" +
+                  "table{font-size:.86em;width:100%;border-collapse:collapse}th,td{border:.5pt solid #999;padding:3pt 4pt;vertical-align:top}th{background:#eee}" +
+                  "blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}mark{background:#fff3a0}";
+                const cfg = "window.onerror=function(m){try{PdfBridge.fail(String(m))}catch(e){}};" +
+                  "window.PagedConfig={auto:true," +
+                  "before:function(){try{PdfBridge.prog('正在加载图片和公式…')}catch(e){}var a=[].slice.call(document.images);return Promise.all(a.map(function(i){return i.complete?0:new Promise(function(r){i.onload=i.onerror=r;setTimeout(r,8000)})})).then(function(){try{PdfBridge.prog('正在分页排版…')}catch(e){}})}," +
+                  "after:function(f){var n=(f&&f.total)||document.querySelectorAll('.pagedjs_page').length;setTimeout(function(){PdfBridge.done(n)},500)}};";
+                const html = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="katex/katex.min.css"><style>' + css + "</style><script>" + cfg + '<\/script><script src="paged.polyfill.js"><\/script></head><body>' +
+                  '<div class="ptl"><b>' + esc2(current.title || "笔记") + "</b><span>" + esc2(sub) + "</span></div>" +
+                  '<div class="pbd' + (o.col === "2" ? " c2" : "") + '">' + tmp.innerHTML + "</div></body></html>";
+                let vt = ""; try { vt = verTag(); } catch (e) {}
+                const name = safeName(current.title || "笔记") + vt + (o.col === "2" ? "_双栏" : "") + ".pdf";
+                const r = await Promise.race([
+                  ncall("makePdf3", html, name),
+                  new Promise((_, rej) => setTimeout(() => rej(new Error("超过 150 秒没有完成")), 150000))
+                ]);
+                window.__nativeProg = old;
+                await window.__askOr("PDF 已导出", "好的", (r.pages ? "共 " + r.pages + " 页。\n" : "") + (r.msg || "") + "\n可以在“文件管理 → 下载 → VideoToNote”里找到。", false, "关闭");
+              } catch (e) {
+                window.__nativeProg = old;
+                const ok = await window.__askOr("导出没成功", "改用系统打印", "停在：" + lastStep + "\n原因：" + e.message + "\n\n可以先用系统打印（在打印界面选“另存为 PDF”）。请把这个提示截图发给我。");
+                if (ok) legacyGo(o);
+              }
             }
             window.__pdf = function (it) { if (it && (!current || current.time !== it.time)) { show(it); setTimeout(open, 200); } else open(); };
             const tools = $("readTools");
