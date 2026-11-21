@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 39
-                  versionName "1.8.2"
+                  versionCode 40
+                  versionName "1.8.3"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -2886,8 +2886,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.8.2";
+          const APP_VER = "1.8.3";
           const CHANGELOG = [
+            ["1.8.3", "多 P 列表去掉系统勾选框：点整行即可选中，选中时整行变色加蓝边，左侧圆点带弹跳打勾动效；正在生成的那一 P 有呼吸光圈"],
             ["1.8.2", "所有确认框改成应用内样式（不再出现“网址为 file://”）；删除可撤销；笔记库可排序、长按或点“选择”进入多选，可批量分类、删除、导出；多 P 视频会列出分 P，可勾选后批量生成；笔记详情新增页内搜索、目录、字号、阅读进度；出错时给出原因和“重试”；修复 1.8.1 分类标签和高亮不显示"],
             ["1.8.1", "删除检查更新；笔记库最多保存 300 篇（原来 15 篇）；搜索加清空按钮、结果数、关键词高亮和正文摘录；分类改用底部面板选择，筛选栏显示篇数和“未分类”，生成页可预选分类；完成提醒：在前台显示提示条，在后台发通知并带标题和分类；备份分“完整（含截图和历史版本）”和“仅正文”，恢复前显示预览"],
             ["1.8.0", "修复检查更新误报“发现新版本 47”：改为按编译序号比较；提示框改成应用内样式，不再显示“网址为 file://”"],
@@ -3605,10 +3606,17 @@ jobs:
               "#linkHint{font-size:13px;margin:6px 4px 0;min-height:18px}#linkHint.ok{color:#34C759}#linkHint.bad{color:#FF9500}" +
               "#pBox{margin:10px 0 4px;padding:14px;border-radius:16px;background:var(--surface-container,rgba(128,128,128,.08));display:none;animation:vIn .3s}" +
               "#pBox .ph{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}#pBox .ph b{font-size:15px}#pBox .ph span{font-size:13px;color:var(--on-surface-variant)}" +
-              "#pList{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:2px}" +
-              "#pList label{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:10px;font-size:14px;color:var(--on-surface);margin:0}#pList label:active{background:rgba(128,128,128,.12)}" +
-              "#pList input{width:18px;height:18px;margin:0;flex:none;accent-color:var(--primary,#0A84FF)}#pList em{font-style:normal;color:var(--on-surface-variant);font-size:12px;margin-left:auto;flex:none}" +
-              "#pList label.dn span{color:var(--on-surface-variant)}#pList label.dn em{color:#34C759}#pList label.cur{background:var(--secondary-container)}" +
+              "#pList{max-height:300px;overflow:auto;display:flex;flex-direction:column;gap:6px}" +
+              "#pList label{position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;font-size:14px;color:var(--on-surface);margin:0;cursor:pointer;-webkit-tap-highlight-color:transparent;border:1.5px solid transparent;transition:background-color .25s,border-color .25s,transform .25s cubic-bezier(.34,1.56,.64,1)}" +
+              "#pList label:active{transform:scale(.98)}" +
+              "#pList input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}" +
+              "#pList label::before{content:'';flex:none;width:22px;height:22px;border-radius:11px;border:2px solid var(--outline,#c7c7cc);box-sizing:border-box;transition:all .28s cubic-bezier(.34,1.56,.64,1)}" +
+              "#pList label.on{background:var(--secondary-container);border-color:var(--primary,#0A84FF)}" +
+              "#pList label.on::before{border-color:var(--primary,#0A84FF);background:var(--primary,#0A84FF) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\") center/16px no-repeat;animation:vCk .32s cubic-bezier(.34,1.56,.64,1)}" +
+              "@keyframes vCk{0%{transform:scale(.6)}60%{transform:scale(1.15)}100%{transform:scale(1)}}" +
+              "#pList label.on span{color:var(--on-secondary-container);font-weight:500}" +
+              "#pList em{font-style:normal;color:var(--on-surface-variant);font-size:12px;margin-left:auto;flex:none}" +
+              "#pList label.dn:not(.on) span{color:var(--on-surface-variant)}#pList label.dn em{color:#34C759}#pList label.cur{animation:vPulse 1.6s ease-in-out infinite}" +
               "#pBox .pa{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}#pBox .pa .sec{flex:1}" +
               "#errBox .errTip{font-size:14px;line-height:1.6;margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(255,149,0,.12)}#errBox .errAct{display:flex;gap:8px;margin-top:10px}" +
               "#readTools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}#readTools .chip5{height:32px;min-height:32px}" +
@@ -3776,7 +3784,7 @@ jobs:
                   lb.querySelector("em").textContent = done.has(pg.page) ? "已生成" : fmtT(pg.duration || 0);
                   L.appendChild(lb);
                 });
-                const cnt = () => { const n = L.querySelectorAll("input:checked").length; pBox.querySelector(".ph span").textContent = "已选 " + n + " P"; pBox.querySelector('[data-a="go"]').textContent = n > 1 ? "批量生成 " + n + " P" : "批量生成"; pBox.querySelector('[data-a="go"]').disabled = n < 2; };
+                const cnt = () => { L.querySelectorAll("label").forEach(l => l.classList.toggle("on", l.querySelector("input").checked)); const n = L.querySelectorAll("input:checked").length; pBox.querySelector(".ph span").textContent = "已选 " + n + " P"; pBox.querySelector('[data-a="go"]').textContent = n > 1 ? "批量生成 " + n + " P" : "批量生成"; pBox.querySelector('[data-a="go"]').disabled = n < 2; };
                 L.onchange = cnt; cnt();
                 pBox.querySelector('[data-a="all"]').onclick = () => { const bs = L.querySelectorAll("input"); const on = Array.from(bs).some(b => !b.checked); bs.forEach(b => b.checked = on); cnt(); };
                 pBox.querySelector('[data-a="new"]').onclick = () => { L.querySelectorAll("label").forEach(l => l.querySelector("input").checked = !l.classList.contains("dn")); cnt(); };
@@ -3800,6 +3808,7 @@ jobs:
                     okN++;
                     const lb = Array.from(L.querySelectorAll("label")).find(l => +l.querySelector("input").value === list[i]);
                     if (lb) { lb.className = "dn"; lb.querySelector("em").textContent = "已生成"; lb.querySelector("input").checked = false; }
+                    L.dispatchEvent(new Event("change"));
                   }
                 } finally {
                   window.__batch = false; pn.value = keep;
