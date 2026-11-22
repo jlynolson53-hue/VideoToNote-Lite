@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 45
-                  versionName "1.8.8"
+                  versionCode 46
+                  versionName "1.8.9"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -2159,7 +2159,8 @@ jobs:
             shot: localStorage.getItem("vtn_shot") !== "0",
             gap: parseInt(localStorage.getItem("vtn_gap") || "60"),
             sf: localStorage.getItem("vtn_sf") || "",
-            vm: localStorage.getItem("vtn_vm") || "Qwen/Qwen3-VL-32B-Instruct"
+            vm: localStorage.getItem("vtn_vm") || "Qwen/Qwen3-VL-32B-Instruct",
+            vmode: localStorage.getItem("vtn_vmode") || "main"
           };
           (function () {
             const st = document.createElement("style");
@@ -2175,13 +2176,17 @@ jobs:
               '<label>硅基流动 API Key（视频没有字幕时，用它把语音转成文字）</label>' +
               '<input id="sfKey" type="password" placeholder="sk-...">' +
               '<p class="mute" id="sfTip"></p>' +
-              '<label>识图模型（硅基流动，必须支持看图）</label><input id="vmName" placeholder="Qwen/Qwen3-VL-32B-Instruct">' +
+              '<label>识图方式</label><select id="vmode"><option value="main">笔记模型直接看图（DeepSeek V4.1 Flash，推荐）</option><option value="sf">硅基流动千问 VL</option></select>' +
+              '<p class="mute">选“笔记模型直接看图”时，如果模型不支持图片，会自动改用下面的千问 VL（需要填硅基流动 Key）。</p>' +
+              '<label>备用识图模型（硅基流动，必须支持看图）</label><input id="vmName" placeholder="Qwen/Qwen3-VL-32B-Instruct">' +
               '<p class="mute">填了硅基流动 Key 时，截图交给这个模型识别；没填时用上面的大模型，它如果不支持看图，识图会全部失败。</p>';
             ($("pg-set") || document.body).appendChild(box);
             $("shotOn").checked = V3.shot;
             $("shotGap").value = String(V3.gap);
             $("sfKey").value = V3.sf;
             $("vmName").value = V3.vm;
+            $("vmode").value = V3.vmode;
+            $("vmode").onchange = () => { V3.vmode = $("vmode").value; localStorage.setItem("vtn_vmode", V3.vmode); MAIN_VFAIL = false; };
             $("vmName").oninput = () => { V3.vm = $("vmName").value.trim() || "Qwen/Qwen3-VL-32B-Instruct"; localStorage.setItem("vtn_vm", V3.vm); };
             const tip = () => { $("sfTip").textContent = V3.sf ? "已填写：没字幕的视频会自动转写" : "未填写：没字幕的视频无法生成笔记"; };
             tip();
@@ -2299,7 +2304,7 @@ jobs:
             return norm(out);
           }
           const VM_LIST = ["Qwen/Qwen3-VL-32B-Instruct", "Qwen/Qwen3-VL-30B-A3B-Instruct", "Qwen/Qwen3-VL-8B-Instruct"];
-          let VM_OK = null, VFAIL = null;
+          let VM_OK = null, VFAIL = null, MAIN_VFAIL = false;
           async function vcall(model, content) {
             const r = await http("POST", "https://api.siliconflow.cn/v1/chat/completions",
               { "Content-Type": "application/json", "Authorization": "Bearer " + V3.sf },
@@ -2310,7 +2315,15 @@ jobs:
             return { ok: false, status: r.status, m, bad: /disabled|not exist|does not exist|not found|invalid model/i.test(m) || r.status === 404 };
           }
           async function vchat(content) {
-            if (!V3.sf) return await chat([{ role: "user", content }]);
+            if (V3.vmode !== "sf" || !V3.sf) {
+              if (!MAIN_VFAIL) {
+                try { return await chat([{ role: "user", content }]); }
+                catch (e) {
+                  if (!V3.sf || /401|402|余额|Key/.test(e.message)) throw e;
+                  MAIN_VFAIL = true; log("笔记模型看图失败（" + e.message.slice(0, 80) + "），本次改用硅基流动千问 VL", "o");
+                }
+              } else if (!V3.sf) throw new Error("笔记模型不支持看图，且没有填硅基流动 Key");
+            }
             if (VFAIL) throw VFAIL;
             const tries = [VM_OK || V3.vm].concat(VM_LIST).filter((x, i, a) => x && a.indexOf(x) === i);
             let last = null;
@@ -2994,8 +3007,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.8.8";
+          const APP_VER = "1.8.9";
           const CHANGELOG = [
+            ["1.8.9", "修复 1.8.8 更新日志少一个逗号导致后半段脚本不运行：宋体切换、生成时常驻通知栏（后台不中断）恢复正常；识图默认改用笔记模型（DeepSeek V4.1 Flash）直接看图，失败自动退回硅基流动千问 VL，可在设置里切换"],
             ["1.8.8", "修复导出 PDF 时部分行字与字之间出现大空格（取消两端对齐）；内置思源宋体，导出 PDF 可选宋体或黑体，笔记阅读页也可切换宋体"],
             ["1.8.7", "导出 PDF 重做：用 Paged.js 按 A4 分页，App 直接生成 PDF 文件（不再弹系统打印），页边距、双栏、页码都由 App 控制，图片和公式不跨页；修复导出面板里已选按钮变成空白"],
             ["1.8.6", "去掉阅读页的单栏/双栏切换，阅读恢复单栏；新增导出 PDF：可选单栏或双栏（教材式，每页左右两栏）、字号、是否保留截图、页边距，带页面预览；首页有标题栏；图片、公式、表格不会被切断"],
