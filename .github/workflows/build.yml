@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 44
-                  versionName "1.8.7"
+                  versionCode 45
+                  versionName "1.8.8"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -1347,6 +1347,16 @@ jobs:
           mkdir -p app/src/main/assets
           curl -fsSL --retry 3 https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.js -o app/src/main/assets/paged.polyfill.js || curl -fsSL --retry 3 https://cdn.jsdelivr.net/npm/pagedjs@0.4.3/dist/paged.polyfill.js -o app/src/main/assets/paged.polyfill.js
           test -s app/src/main/assets/paged.polyfill.js
+          mkdir -p app/src/main/assets/fonts
+          NS=https://unpkg.com/@fontsource/noto-serif-sc@5.3.1
+          if curl -fsSL --retry 3 "$NS/400.css" -o /tmp/ns.css; then
+            grep -o 'noto-serif-sc-[0-9]*-400-normal\.woff2' /tmp/ns.css | sort -u > /tmp/nsl.txt
+            xargs -P 8 -I{} curl -fsSL --retry 3 "$NS/files/{}" -o "app/src/main/assets/fonts/{}" < /tmp/nsl.txt || true
+            sed -e 's#url(./files/#url(fonts/#g' -e 's#, url([^)]*\.woff) format(.woff.)##g' /tmp/ns.css > app/src/main/assets/fonts/serif.css
+            ls app/src/main/assets/fonts | wc -l
+          else
+            echo "/* 宋体下载失败，使用系统字体 */" > app/src/main/assets/fonts/serif.css
+          fi
           cat > app/src/main/assets/index.html <<'VTN_EOF'
           <!DOCTYPE html>
           <html lang="zh-CN">
@@ -2984,8 +2994,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.8.7";
+          const APP_VER = "1.8.8";
           const CHANGELOG = [
+            ["1.8.8", "修复导出 PDF 时部分行字与字之间出现大空格（取消两端对齐）；内置思源宋体，导出 PDF 可选宋体或黑体，笔记阅读页也可切换宋体"],
             ["1.8.7", "导出 PDF 重做：用 Paged.js 按 A4 分页，App 直接生成 PDF 文件（不再弹系统打印），页边距、双栏、页码都由 App 控制，图片和公式不跨页；修复导出面板里已选按钮变成空白"],
             ["1.8.6", "去掉阅读页的单栏/双栏切换，阅读恢复单栏；新增导出 PDF：可选单栏或双栏（教材式，每页左右两栏）、字号、是否保留截图、页边距，带页面预览；首页有标题栏；图片、公式、表格不会被切断"],
             ["1.8.5", "笔记详情可切换单栏或双栏排版（像教材那样分两栏，中间有分隔线），选择会被记住；图片、公式、表格不会被拆到两栏"],
@@ -4106,7 +4117,7 @@ jobs:
           (function () {
             const st = document.createElement("style"); st.textContent = ".pdfS .seg{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}.pdfS .lb{font-size:13px;color:var(--on-surface-variant);margin-top:4px}.pdfS .seg .chip5{flex:1;justify-content:center;min-width:72px;color:var(--on-surface,#1c1c1e);background:transparent}.pdfS .seg .chip5.on{background:#0A84FF!important;color:#fff!important;border-color:#0A84FF!important;font-weight:600}.pdfS .seg .chip5.on::before{color:#fff}.pdfS .pvw{display:flex;justify-content:center;margin:4px 0 12px}.pdfS .pg{width:120px;height:170px;background:#fff;border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:12px 10px;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;transition:all .3s}.pdfS .pg .hd{height:9px;width:70%;background:#333;border-radius:2px;margin-bottom:4px}.pdfS .pg .bd{flex:1;display:flex;gap:7px}.pdfS .pg .cl{flex:1;display:flex;flex-direction:column;gap:4px}.pdfS .pg .cl i{display:block;height:3px;background:#bbb;border-radius:2px}.pdfS .pg .cl i.im{height:22px;background:#cfe3ff}.pdfS .pg.one .cl+.cl{display:none}.pdfS .pg.two .cl+.cl{border-left:1px solid #ddd;padding-left:6px}.pdfS .pg.noimg i.im{display:none}@media print{#v5print.pp{color:#222;line-height:1.62;font-family:'Noto Serif CJK SC','Source Han Serif SC','Songti SC',serif}#v5print.pp .ptl{column-span:all;border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}#v5print.pp .ptl b{display:block;font-size:1.55em;line-height:1.3;font-family:sans-serif}#v5print.pp .ptl span{font-size:.8em;color:#666}#v5print.pp.c2 .pbd{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb}#v5print.pp .pbd>h1:first-child{display:none}#v5print.pp h1{column-span:all;font-size:1.35em;margin:12pt 0 6pt}#v5print.pp h2{font-size:1.18em;margin:10pt 0 4pt;padding-left:5pt;border-left:3pt solid #0A84FF}#v5print.pp h3{font-size:1.05em;margin:8pt 0 3pt}#v5print.pp h1,#v5print.pp h2,#v5print.pp h3{break-after:avoid;page-break-after:avoid}#v5print.pp p,#v5print.pp li{orphans:2;widows:2;margin:3pt 0}#v5print.pp img,#v5print.pp figure,#v5print.pp table,#v5print.pp pre,#v5print.pp blockquote,#v5print.pp .katex-display,#v5print.pp .shot{break-inside:avoid;page-break-inside:avoid}#v5print.pp img{max-width:100%;height:auto;border-radius:3pt}#v5print.pp .katex-display{overflow:hidden;margin:5pt 0}#v5print.pp.c2 .katex-display{font-size:.9em}#v5print.pp pre{white-space:pre-wrap;word-break:break-all;font-size:.85em}#v5print.pp table{font-size:.88em;width:100%;border-collapse:collapse}#v5print.pp blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}#v5print.pp.noimg img,#v5print.pp.noimg figure,#v5print.pp.noimg .shot{display:none!important}}"; document.head.appendChild(st);
             const pst = document.createElement("style"); document.head.appendChild(pst);
-            const D = { col: "2", fs: "m", img: "1", mg: "n" };
+            const D = { col: "2", fs: "m", img: "1", mg: "n", ff: "song" };
             const opt = () => { try { return Object.assign({}, D, JSON.parse(localStorage.getItem("vtn_pdf") || "{}")); } catch (e) { return Object.assign({}, D); } };
             const FS = { s: "10pt", m: "11.5pt", l: "13pt" }, MG = { n: "16mm 14mm 16mm 14mm", w: "10mm 9mm 12mm 9mm" };
             function open() {
@@ -4117,6 +4128,7 @@ jobs:
                 '<div class="pvw"><div class="pg"><div class="hd"></div><div class="bd"><div class="cl"><i></i><i></i><i class="im"></i><i></i><i></i><i></i><i></i></div><div class="cl"><i></i><i></i><i></i><i class="im"></i><i></i><i></i></div></div></div></div>' +
                 '<div class="lb">排版</div><div class="seg" data-k="col"><button class="chip5" data-v="1">单栏</button><button class="chip5" data-v="2">双栏（教材式）</button></div>' +
                 '<div class="lb">字号</div><div class="seg" data-k="fs"><button class="chip5" data-v="s">小</button><button class="chip5" data-v="m">中</button><button class="chip5" data-v="l">大</button></div>' +
+                '<div class="lb">字体</div><div class="seg" data-k="ff"><button class="chip5" data-v="song">宋体</button><button class="chip5" data-v="hei">黑体</button></div>' +
                 '<div class="lb">截图</div><div class="seg" data-k="img"><button class="chip5" data-v="1">保留</button><button class="chip5" data-v="0">不要（更省纸）</button></div>' +
                 '<div class="lb">页边距</div><div class="seg" data-k="mg"><button class="chip5" data-v="n">标准</button><button class="chip5" data-v="w">窄</button></div>' +
                 '<div class="mute" style="font-size:13px;line-height:1.6;margin-top:2px">直接生成 PDF 文件，保存到 下载/VideoToNote，不经过系统打印。页边距、分栏、页码都由 App 排好。</div>' +
@@ -4168,8 +4180,10 @@ jobs:
                 tmp.querySelectorAll("img").forEach(i => { i.removeAttribute("loading"); });
                 const esc2 = t => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
                 const sub = (current.tag ? current.tag + " · " : "") + new Date(current.time || Date.now()).toLocaleDateString() + (current.bvid ? " · " + current.bvid : "");
+                const FFS = "'Noto Serif SC','Noto Serif CJK SC','Source Han Serif SC','Songti SC','SimSun',serif", FFH = "'Noto Sans CJK SC','Source Han Sans SC','PingFang SC',sans-serif";
                 const css = "@page{size:A4;margin:" + (MG[o.mg] || MG.n) + ";@bottom-center{content:counter(page) \" / \" counter(pages);font-size:8.5pt;color:#888;font-family:sans-serif}}" +
-                  "html,body{background:#fff;margin:0}body{color:#222;font-size:" + (FS[o.fs] || FS.m) + ";line-height:1.62;font-family:'Noto Serif CJK SC','Source Han Serif SC',serif;text-align:justify}" +
+                  "html,body{background:#fff;margin:0}body{color:#222;font-size:" + (FS[o.fs] || FS.m) + ";line-height:1.62;font-family:" + (o.ff === "hei" ? FFH : FFS) + ";text-align:start}" +
+                  "*{text-align-last:auto!important;letter-spacing:normal!important;word-spacing:normal!important}p,li,td,th,h1,h2,h3,div{text-align:start!important}" +
                   ".ptl{border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}.ptl b{display:block;font-size:1.6em;line-height:1.3;font-family:sans-serif}.ptl span{font-size:.8em;color:#666}" +
                   ".pbd.c2{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb;column-fill:auto}" +
                   ".pbd>h1:first-child{display:none}" +
@@ -4183,9 +4197,9 @@ jobs:
                   "blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}mark{background:#fff3a0}";
                 const cfg = "window.onerror=function(m){try{PdfBridge.fail(String(m))}catch(e){}};" +
                   "window.PagedConfig={auto:true," +
-                  "before:function(){try{PdfBridge.prog('正在加载图片和公式…')}catch(e){}var a=[].slice.call(document.images);return Promise.all(a.map(function(i){return i.complete?0:new Promise(function(r){i.onload=i.onerror=r;setTimeout(r,8000)})})).then(function(){try{PdfBridge.prog('正在分页排版…')}catch(e){}})}," +
+                  "before:function(){try{PdfBridge.prog('正在加载图片和公式…')}catch(e){}var a=[].slice.call(document.images);return Promise.all(a.map(function(i){return i.complete?0:new Promise(function(r){i.onload=i.onerror=r;setTimeout(r,8000)})})).then(function(){try{PdfBridge.prog('正在加载字体…')}catch(e){}return document.fonts&&document.fonts.load?Promise.race([document.fonts.load('16px Noto Serif SC',document.body.textContent.slice(0,30000)),new Promise(function(r){setTimeout(r,15000)})]).catch(function(){}):0}).then(function(){try{PdfBridge.prog('正在分页排版…')}catch(e){}})}," +
                   "after:function(f){var n=(f&&f.total)||document.querySelectorAll('.pagedjs_page').length;setTimeout(function(){PdfBridge.done(n)},500)}};";
-                const html = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="katex/katex.min.css"><style>' + css + "</style><script>" + cfg + '<\/script><script src="paged.polyfill.js"><\/script></head><body>' +
+                const html = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="katex/katex.min.css"><link rel="stylesheet" href="fonts/serif.css"><style>' + css + "</style><script>" + cfg + '<\/script><script src="paged.polyfill.js"><\/script></head><body>' +
                   '<div class="ptl"><b>' + esc2(current.title || "笔记") + "</b><span>" + esc2(sub) + "</span></div>" +
                   '<div class="pbd' + (o.col === "2" ? " c2" : "") + '">' + tmp.innerHTML + "</div></body></html>";
                 let vt = ""; try { vt = verTag(); } catch (e) {}
@@ -4208,6 +4222,20 @@ jobs:
               const b = document.createElement("button"); b.className = "chip5"; b.textContent = "导出 PDF"; b.onclick = () => window.__pdf();
               const s0 = tools.querySelector('[data-a="s"]'); s0 ? s0.before(b) : tools.appendChild(b);
             }
+          })();
+          // v1.8.8：阅读字体（宋体/黑体）（vtn_rfont）
+          (function () {
+            const pv = $("preview"), tools = $("readTools"); if (!pv || !tools) return;
+            const lk = document.createElement("link"); lk.rel = "stylesheet"; lk.href = "fonts/serif.css"; document.head.appendChild(lk);
+            const st = document.createElement("style");
+            st.textContent = "#preview{text-align:start}#preview.song{font-family:\"Noto Serif SC\",\"Noto Serif CJK SC\",\"Source Han Serif SC\",\"Songti SC\",\"SimSun\",serif}#preview.song h1,#preview.song h2,#preview.song h3{font-family:\"Noto Sans CJK SC\",\"Source Han Sans SC\",\"PingFang SC\",sans-serif}";
+            document.head.appendChild(st);
+            const b = document.createElement("button"); b.className = "chip5";
+            const song = () => localStorage.getItem("vtn_rfont") === "song";
+            const apply = () => { pv.classList.toggle("song", song()); b.textContent = song() ? "宋体" : "黑体"; };
+            b.onclick = () => { localStorage.setItem("vtn_rfont", song() ? "hei" : "song"); apply(); snack(song() ? "阅读字体：宋体" : "阅读字体：黑体"); };
+            const s0 = tools.querySelector('[data-a="s"]'); s0 ? s0.before(b) : tools.appendChild(b);
+            apply();
           })();
           iconFallback();
           </script>
