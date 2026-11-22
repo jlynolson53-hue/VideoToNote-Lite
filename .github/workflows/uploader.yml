@@ -1,0 +1,405 @@
+name: Build Uploader App
+
+on:
+  push:
+    paths:
+      - ".github/workflows/uploader.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - name: Generate project
+        shell: bash
+        run: |
+          mkdir -p "$(dirname 'settings.gradle')"
+          cat > 'settings.gradle' <<'EOF_S'
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositories { google(); mavenCentral() } }
+          rootProject.name = "BuildUploader"
+          include ":app"
+          EOF_S
+          mkdir -p "$(dirname 'build.gradle')"
+          cat > 'build.gradle' <<'EOF_R'
+          plugins { id 'com.android.application' version '8.5.2' apply false }
+          EOF_R
+          printf 'org.gradle.jvmargs=-Xmx2g\nandroid.useAndroidX=false\n' > gradle.properties
+          mkdir -p "$(dirname 'app/build.gradle')"
+          cat > 'app/build.gradle' <<'EOF_A'
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.vtn.uploader'
+              compileSdk 34
+              defaultConfig {
+                  applicationId 'com.vtn.uploader'
+                  minSdk 24
+                  targetSdk 34
+                  versionCode Integer.parseInt(System.getenv("RUN_NO") ?: "1")
+                  versionName "1.0." + (System.getenv("RUN_NO") ?: "1")
+              }
+              signingConfigs {
+                  release {
+                      storeFile rootProject.file('up.jks')
+                      storePassword 'uploader123'
+                      keyAlias 'up'
+                      keyPassword 'uploader123'
+                  }
+              }
+              buildTypes { release { signingConfig signingConfigs.release; minifyEnabled false } }
+              compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+              lint { checkReleaseBuilds false; abortOnError false }
+          }
+          EOF_A
+          mkdir -p "$(dirname 'app/src/main/AndroidManifest.xml')"
+          cat > 'app/src/main/AndroidManifest.xml' <<'EOF_M'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+              <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+              <application android:label="build上传助手" android:icon="@android:drawable/stat_sys_upload"
+                  android:theme="@android:style/Theme.Material.Light.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask"
+                      android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF_M
+          mkdir -p "$(dirname 'app/src/main/java/com/vtn/uploader/MainActivity.java')"
+          cat > 'app/src/main/java/com/vtn/uploader/MainActivity.java' <<'EOF_J'
+          package com.vtn.uploader;
+          
+          import android.Manifest;
+          import android.app.Activity;
+          import android.app.Notification;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.app.PendingIntent;
+          import android.content.Intent;
+          import android.content.pm.PackageManager;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.os.Environment;
+          import android.provider.Settings;
+          import android.util.Base64;
+          import android.view.WindowManager;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.widget.Toast;
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+          import java.io.File;
+          import java.io.FileInputStream;
+          import java.util.ArrayList;
+          import java.util.Collections;
+          import java.util.List;
+          
+          public class MainActivity extends Activity {
+              WebView wv;
+          
+              @Override
+              protected void onCreate(Bundle b) {
+                  super.onCreate(b);
+                  wv = new WebView(this);
+                  WebSettings s = wv.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setAllowFileAccess(true);
+                  s.setAllowUniversalAccessFromFileURLs(true);
+                  wv.setWebChromeClient(new WebChromeClient());
+                  wv.addJavascriptInterface(new Bridge(), "App");
+                  wv.loadUrl("file:///android_asset/index.html");
+                  setContentView(wv);
+                  if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+                      requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 2);
+                  }
+              }
+          
+              void refresh() {
+                  if (wv != null) wv.evaluateJavascript("window.onAppResume&&onAppResume()", null);
+              }
+          
+              @Override
+              protected void onResume() { super.onResume(); refresh(); }
+          
+              @Override
+              public void onRequestPermissionsResult(int code, String[] p, int[] r) {
+                  super.onRequestPermissionsResult(code, p, r);
+                  refresh();
+              }
+          
+              @Override
+              public void onBackPressed() { moveTaskToBack(true); }
+          
+              boolean has() {
+                  if (Build.VERSION.SDK_INT >= 30) return Environment.isExternalStorageManager();
+                  return checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+              }
+          
+              class Bridge {
+                  @JavascriptInterface
+                  public boolean hasAccess() { return has(); }
+          
+                  @JavascriptInterface
+                  public void requestAccess() {
+                      runOnUiThread(new Runnable() { public void run() {
+                          try {
+                              if (Build.VERSION.SDK_INT >= 30) {
+                                  startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                          Uri.parse("package:" + getPackageName())));
+                              } else {
+                                  requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+                              }
+                          } catch (Exception e) {
+                              try { startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)); } catch (Exception ignored) {}
+                          }
+                      }});
+                  }
+          
+                  @JavascriptInterface
+                  public String listYml() {
+                      JSONArray arr = new JSONArray();
+                      try {
+                          List<File> all = new ArrayList<File>();
+                          File dl = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                          File[] fs = dl.listFiles();
+                          if (fs != null) for (File f : fs) {
+                              String n = f.getName().toLowerCase();
+                              if (f.isFile() && (n.endsWith(".yml") || n.endsWith(".yaml"))) all.add(f);
+                          }
+                          Collections.sort(all, new java.util.Comparator<File>() { public int compare(File a, File c) {
+                              boolean ba = a.getName().toLowerCase().contains("build"), bc = c.getName().toLowerCase().contains("build");
+                              if (ba != bc) return ba ? -1 : 1;
+                              return Long.compare(c.lastModified(), a.lastModified());
+                          }});
+                          for (File f : all) {
+                              JSONObject o = new JSONObject();
+                              o.put("path", f.getAbsolutePath());
+                              o.put("name", f.getName());
+                              o.put("size", f.length());
+                              o.put("mtime", f.lastModified());
+                              arr.put(o);
+                          }
+                      } catch (Exception ignored) {}
+                      return arr.toString();
+                  }
+          
+                  @JavascriptInterface
+                  public String readB64(String path) {
+                      try {
+                          File f = new File(path);
+                          if (!f.isFile() || f.length() == 0 || f.length() > 5 * 1024 * 1024) return "";
+                          byte[] buf = new byte[(int) f.length()];
+                          FileInputStream in = new FileInputStream(f);
+                          try {
+                              int off = 0, n;
+                              while (off < buf.length && (n = in.read(buf, off, buf.length - off)) > 0) off += n;
+                          } finally { in.close(); }
+                          return Base64.encodeToString(buf, Base64.NO_WRAP);
+                      } catch (Exception e) {
+                          return "";
+                      }
+                  }
+          
+                  @JavascriptInterface
+                  public void openUrl(String url) {
+                      try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) {}
+                  }
+          
+                  @JavascriptInterface
+                  public void toast(final String m) {
+                      runOnUiThread(new Runnable() { public void run() {
+                          Toast.makeText(MainActivity.this, m, Toast.LENGTH_SHORT).show();
+                      }});
+                  }
+          
+                  @JavascriptInterface
+                  public void keepScreen(final boolean on) {
+                      runOnUiThread(new Runnable() { public void run() {
+                          if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                          else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                      }});
+                  }
+          
+                  @JavascriptInterface
+                  public void notify(String title, String text) {
+                      try {
+                          NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                          Notification.Builder nb;
+                          if (Build.VERSION.SDK_INT >= 26) {
+                              nm.createNotificationChannel(new NotificationChannel("build", "编译结果", NotificationManager.IMPORTANCE_DEFAULT));
+                              nb = new Notification.Builder(MainActivity.this, "build");
+                          } else {
+                              nb = new Notification.Builder(MainActivity.this);
+                          }
+                          PendingIntent pi = PendingIntent.getActivity(MainActivity.this, 0,
+                                  new Intent(MainActivity.this, MainActivity.class),
+                                  PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                          nb.setSmallIcon(android.R.drawable.stat_sys_upload_done).setContentTitle(title).setContentText(text)
+                                  .setAutoCancel(true).setContentIntent(pi);
+                          nm.notify(1, nb.build());
+                      } catch (Exception ignored) {}
+                  }
+              }
+          }
+          EOF_J
+          mkdir -p "$(dirname 'app/src/main/assets/index.html')"
+          cat > 'app/src/main/assets/index.html' <<'EOF_H'
+          <!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>build 上传助手</title><style>
+          body{margin:0;font-family:system-ui,sans-serif;background:#f4f6fa;color:#1f2937}
+          .w{max-width:760px;margin:auto;padding:16px}h1{font-size:21px;margin:6px 0 14px}
+          .c{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px #0001}
+          .c h2{font-size:15px;margin:0 0 10px}label{display:block;font-size:13px;color:#6b7280;margin:10px 0 4px}
+          input[type=text],input[type=password],input[type=number],select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;background:#fff}
+          .row{display:flex;gap:10px}.row>*{flex:1}.chk{display:flex;gap:6px;align-items:center;color:#1f2937;font-size:14px}
+          button{padding:11px 16px;border:0;border-radius:10px;font-size:15px;background:#e5e7eb;color:#111}
+          #go{background:#2563eb;color:#fff;width:100%;padding:16px;font-size:18px;font-weight:600}#go:disabled{opacity:.5}
+          .b{padding:2px 8px;border-radius:99px;font-size:12px}.ok{background:#dcfce7;color:#166534}.no{background:#fee2e2;color:#991b1b}
+          #newest{font-size:14px;margin-top:8px;color:#374151}#perm{display:none;background:#fff7ed;border:1px solid #fdba74}
+          #log{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:10px;font:13px/1.6 monospace;min-height:120px;white-space:pre-wrap}
+          .g{color:#4ade80}.r{color:#f87171}.y{color:#fbbf24}.d{color:#94a3b8}
+          .lk{display:inline-block;margin:8px 8px 0 0;padding:9px 13px;border-radius:10px;background:#eff6ff;color:#2563eb}
+          details summary{font-size:15px;font-weight:600;color:#374151}
+          </style></head><body><div class="w"><h1>build.yml 上传助手</h1>
+          <div class="c" id="perm"><h2>需要文件权限</h2><div style="font-size:14px">要自动读取"下载"文件夹里最新的 build.yml，请允许"所有文件访问权限"。</div><button style="margin-top:10px;background:#f97316;color:#fff" onclick="App.requestAccess()">去开启</button></div>
+          <div class="c"><h2>文件（自动选最新）</h2><select id="f"></select><div id="newest"></div><button style="margin-top:10px" onclick="loadFiles(true)">刷新</button></div>
+          <button id="go" onclick="run()">上传</button>
+          <div class="c" style="margin-top:14px"><h2>进度：<span id="st">等待开始</span></h2><div id="log"></div><div id="links"></div></div>
+          <div class="c"><h2>GitHub 授权 <span id="ts" class="b"></span></h2>
+          <div class="row"><input id="tok" type="password" placeholder="粘贴 token（需 repo + workflow 权限）"><button style="flex:0 0 auto" onclick="saveTok()">保存</button></div></div>
+          <div class="c"><details><summary>选项</summary><label>仓库</label><input id="repo" type="text">
+          <div class="row"><div><label>分支</label><input id="br" type="text"></div><div><label>最长等待（分钟）</label><input id="to" type="number" value="25"></div></div>
+          <label>仓库内路径</label><input id="tg" type="text">
+          <label class="chk"><input id="dry" type="checkbox">试运行（不提交）</label><label class="chk"><input id="nw" type="checkbox">上传后不跟踪编译</label>
+          <button style="margin-top:10px" onclick="saveOpt()">保存选项</button></details></div></div>
+          <script>
+          const $=i=>document.getElementById(i),API="https://api.github.com",LS=localStorage;
+          const DEF={repo:"jlynolson53-hue/VideoToNote-Lite",br:"main",tg:".github/workflows/build.yml"};
+          let busy=false,files=[];
+          function showTok(){const t=LS.getItem("vtn_tok");$("ts").textContent=t?"已就绪":"未设置";$("ts").className="b "+(t?"ok":"no")}
+          function saveTok(){const t=$("tok").value.trim();if(!t)return App.toast("先粘贴 token");LS.setItem("vtn_tok",t);$("tok").value="";showTok();App.toast("已保存")}
+          function loadOpt(){const o=JSON.parse(LS.getItem("vtn_opt")||"{}");for(const k in DEF)$(k).value=o[k]||DEF[k]}
+          function saveOpt(){const o={};for(const k in DEF)o[k]=$(k).value.trim();LS.setItem("vtn_opt",JSON.stringify(o));App.toast("已保存")}
+          function say(m,c){const d=document.createElement("div");d.className=c||"";d.textContent="["+new Date().toTimeString().slice(0,8)+"] "+m;$("log").appendChild(d);d.scrollIntoView({block:"nearest"})}
+          function link(t,u){const b=document.createElement("button");b.className="lk";b.textContent=t;b.onclick=()=>App.openUrl(u);$("links").appendChild(b)}
+          function st(s){$("st").textContent=s}
+          const kb=n=>(n/1024).toFixed(1)+" KB",sleep=ms=>new Promise(r=>setTimeout(r,ms)),p2=n=>String(n).padStart(2,"0");
+          function fmt(t){const d=new Date(t);return p2(d.getMonth()+1)+"-"+p2(d.getDate())+" "+p2(d.getHours())+":"+p2(d.getMinutes())}
+          function loadFiles(manual){
+           const ok=App.hasAccess();$("perm").style.display=ok?"none":"block";if(!ok){$("f").innerHTML="<option value=''>未授权</option>";return}
+           files=JSON.parse(App.listYml());const f=$("f");f.innerHTML="";
+           if(!files.length){f.innerHTML="<option value=''>下载文件夹里没有 .yml</option>";$("newest").textContent="";return}
+           files.forEach(x=>{const o=document.createElement("option");o.value=x.path;o.textContent=x.name+"  ("+kb(x.size)+"，"+fmt(x.mtime)+")";f.appendChild(o)});
+           f.value=files[0].path;$("newest").textContent="已选最新："+files[0].name+"，修改于 "+fmt(files[0].mtime);
+           if(manual)App.toast("已刷新")}
+          window.onAppResume=()=>{if(!busy)loadFiles(false)};
+          async function gh(path,opt={}){const h={Accept:"application/vnd.github+json",Authorization:"token "+LS.getItem("vtn_tok")};
+           if(opt.body)h["Content-Type"]="application/json";
+           try{const r=await fetch(API+path,{method:opt.method||"GET",headers:h,body:opt.body?JSON.stringify(opt.body):undefined,cache:"no-store"});
+            let j=null;try{j=await r.json()}catch(e){}return{s:r.status,j}}catch(e){return{s:0,j:{message:String(e)}}}}
+          class Fail extends Error{}
+          async function run(){$("log").innerHTML="";$("links").innerHTML="";$("go").disabled=true;busy=true;
+           try{await main()}catch(e){say(e.message,"r");st("出错")}finally{$("go").disabled=false;busy=false}}
+          async function main(){
+           const path=$("f").value;if(!path)throw new Fail("没有可上传的文件");
+           if(!LS.getItem("vtn_tok"))throw new Fail("还没设置 token，请在下方 GitHub 授权里粘贴保存");
+           const repo=$("repo").value.trim().replace(/^\/|\/$/g,""),br=$("br").value.trim()||"main",tg=$("tg").value.trim().replace(/^\//,"");
+           const info=files.find(x=>x.path==path)||{name:path};
+           st("检查文件");const content=App.readB64(path);if(!content)throw new Fail("读不到文件，或文件是空的");
+           const bin=atob(content),raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);
+           const text=new TextDecoder().decode(raw);say("源文件："+info.name+"（"+kb(raw.length)+"）");
+           if(!/^name:\s*\S/m.test(text)||!/^jobs:/m.test(text))throw new Fail("这个文件不像 GitHub Actions 工作流（缺 name: 或 jobs:）");
+           if(!/^on:/m.test(text))say("提醒：没找到 on: 触发段","y");
+           say("内容检查：正常"+(text.includes("vtn.jks")?"，引用了 vtn.jks 签名":""),"d");
+           const fp="/repos/"+repo+"/contents/"+tg.split("/").map(encodeURIComponent).join("/");
+           st("对比线上文件");let r=await gh(fp+"?ref="+encodeURIComponent(br)),online=null;
+           if(r.s==200)online=r.j;
+           else if(r.s==404){const b=await gh("/repos/"+repo+"/git/ref/heads/"+encodeURIComponent(br));if(b.s==404)throw new Fail("仓库或分支 '"+br+"' 不存在");say("线上没有此文件，将新建","y")}
+           else if(r.s==401||r.s==403)throw new Fail("授权失效（HTTP "+r.s+"），请重新保存 token");
+           else if(r.s==0)throw new Fail("连不上 GitHub，请检查网络/VPN："+r.j.message);
+           else throw new Fail("读取线上文件失败（HTTP "+r.s+"）："+(r.j&&r.j.message||""));
+           if(online&&(online.content||"").replace(/\s/g,"")===content){say("线上文件和这个完全一致，不用上传（sha "+online.sha.slice(0,7)+"）","g");st("无需上传");return}
+           const m=info.name.match(/v\d+\.\d+(?:\.\d+)?/i);
+           const now=new Date(),ver=m?m[0]:"";
+           const msg="更新 build.yml"+(ver?"（"+ver+"）":"")+" - "+now.getFullYear()+"-"+p2(now.getMonth()+1)+"-"+p2(now.getDate())+" "+p2(now.getHours())+":"+p2(now.getMinutes());
+           say("待上传："+repo+" : "+tg+"（分支 "+br+"）");say(online?"将覆盖线上 sha "+online.sha.slice(0,7):"本次为新建","d");say("提交说明："+msg,"d");
+           if($("dry").checked){say("试运行：未实际提交","y");st("试运行完成");return}
+           st("上传中");let res=null;
+           for(let a=0;a<2;a++){const body={message:msg,content,branch:br};if(online)body.sha=online.sha;
+            r=await gh(fp,{method:"PUT",body});if(r.s==200||r.s==201){res=r.j;break}
+            const det=r.j&&r.j.message||"";
+            if((r.s==409||r.s==422)&&a==0){const r2=await gh(fp+"?ref="+encodeURIComponent(br));if(r2.s==200){online=r2.j;say("线上文件刚被改过，重试一次","y");continue}}
+            if((r.s==401||r.s==403||r.s==404)&&/workflow/i.test(det))throw new Fail("GitHub 拒绝写 workflow 文件：token 缺 workflow 权限");
+            if(r.s==0)throw new Fail("连不上 GitHub："+det);
+            throw new Fail("上传失败（HTTP "+r.s+"）："+det)}
+           const sha=res.commit.sha;say("上传成功！提交 "+sha.slice(0,7),"g");link("查看提交",res.commit.html_url);link("Actions 页面","https://github.com/"+repo+"/actions");
+           if($("nw").checked){st("已上传");return}
+           st("等待编译");say("正在等 GitHub 编译（通常 5-10 分钟）");App.keepScreen(true);
+           try{const t0=Date.now(),dl=t0+(+$("to").value||25)*60000;let last="";
+           while(Date.now()<dl){await sleep(10000);
+            const q=await gh("/repos/"+repo+"/actions/runs?head_sha="+sha+"&per_page=10");if(q.s!=200)continue;
+            const rn=(q.j.workflow_runs||[]).find(x=>x.head_sha==sha);const sec=Math.round((Date.now()-t0)/1000),tm=Math.floor(sec/60)+":"+p2(sec%60);
+            if(!rn){st("等待编译开始（"+tm+"）");continue}
+            st(({queued:"排队中",in_progress:"编译中"}[rn.status]||rn.status)+"（已用 "+tm+"）");
+            const k=rn.status+"/"+rn.conclusion;if(k==last)continue;last=k;
+            if(rn.status=="queued")say("排队中...","d");
+            else if(rn.status=="in_progress"){say("编译中...","d");link("本次编译日志",rn.html_url)}
+            else if(rn.status=="completed"){
+             if(rn.conclusion=="success"){say("编译成功！用时 "+tm,"g");link("下载新 APK","https://github.com/"+repo+"/releases/latest");st("完成");App.notify("编译成功","点开下载新 APK");return}
+             say("编译失败（"+rn.conclusion+"）","r");link("失败日志",rn.html_url);st("编译失败");App.notify("编译失败","打开查看日志");return}}
+           say("还没等到编译结束，可点 Actions 页面看进度","y");st("等待超时")}finally{App.keepScreen(false)}}
+          loadOpt();showTok();loadFiles(false);
+          </script></body></html>
+          EOF_H
+
+      - name: Signing key (fixed, created once)
+        shell: bash
+        run: |
+          if [ ! -f up.jks ]; then
+            keytool -genkeypair -keystore up.jks -alias up -keyalg RSA -keysize 2048 -validity 36500 -storepass uploader123 -keypass uploader123 -dname "CN=BuildUploader"
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git add up.jks
+            git commit -m "add fixed signing key [skip ci]"
+            git push
+          fi
+      - name: Build APK
+        shell: bash
+        env:
+          RUN_NO: ${{ github.run_number }}
+        run: |
+          gradle --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk BuildUploader.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BuildUploader
+          path: BuildUploader.apk
+      - name: Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_NO: ${{ github.run_number }}
+        run: |
+          gh release create "v1.0.$RUN_NO" BuildUploader.apk --title "build上传助手 1.0.$RUN_NO" --notes "自动构建"
