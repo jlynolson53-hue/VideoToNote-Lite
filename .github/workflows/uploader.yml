@@ -69,15 +69,17 @@ jobs:
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
               <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-              <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-              <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
               <queries>
-                  <package android:name="dev.imranr.obtainium" />
-                  <package android:name="dev.imranr.obtainium.fdroid" />
+                  <intent>
+                      <action android:name="android.intent.action.MAIN" />
+                      <category android:name="android.intent.category.LAUNCHER" />
+                  </intent>
                   <package android:name="com.vtn.lite" />
               </queries>
               <application android:label="build上传助手" android:icon="@android:drawable/stat_sys_upload"
+                  android:requestLegacyExternalStorage="true"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar">
                   <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask"
                       android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize">
@@ -100,7 +102,9 @@ jobs:
           import android.app.NotificationManager;
           import android.app.PendingIntent;
           import android.content.Intent;
+          import android.content.pm.PackageInfo;
           import android.content.pm.PackageManager;
+          import android.content.pm.ResolveInfo;
           import android.net.Uri;
           import android.os.Build;
           import android.os.Bundle;
@@ -117,20 +121,15 @@ jobs:
           import org.json.JSONObject;
           import java.io.File;
           import java.io.FileInputStream;
-          import java.util.ArrayList;
-          import java.util.Collections;
-          import java.util.List;
-          import android.content.BroadcastReceiver;
-          import android.content.Context;
-          import android.content.IntentFilter;
-          import android.content.pm.PackageInfo;
-          import android.content.pm.PackageInstaller;
           import java.io.FileOutputStream;
           import java.io.InputStream;
-          import java.io.OutputStream;
           import java.net.HttpURLConnection;
           import java.net.URL;
           import java.security.MessageDigest;
+          import java.util.ArrayList;
+          import java.util.Collections;
+          import java.util.Comparator;
+          import java.util.List;
           
           public class MainActivity extends Activity {
               WebView wv;
@@ -138,51 +137,45 @@ jobs:
               @Override
               protected void onCreate(Bundle b) {
                   super.onCreate(b);
+                  getWindow().setStatusBarColor(0xFFF3F5F9);
+                  if (Build.VERSION.SDK_INT >= 23) getWindow().getDecorView().setSystemUiVisibility(android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
                   wv = new WebView(this);
                   WebSettings s = wv.getSettings();
                   s.setJavaScriptEnabled(true);
                   s.setDomStorageEnabled(true);
                   s.setAllowFileAccess(true);
                   s.setAllowUniversalAccessFromFileURLs(true);
+                  s.setTextZoom(100);
                   wv.setWebChromeClient(new WebChromeClient());
                   wv.addJavascriptInterface(new Bridge(), "App");
                   wv.loadUrl("file:///android_asset/index.html");
-                  IntentFilter flt = new IntentFilter(ACT_INST);
-                  if (Build.VERSION.SDK_INT >= 33) registerReceiver(recv, flt, Context.RECEIVER_NOT_EXPORTED);
-                  else registerReceiver(recv, flt);
                   setContentView(wv);
                   if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
                       requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 2);
                   }
               }
           
-              static final String ACT_INST = "com.vtn.uploader.INSTALL_RESULT";
-          
               void js(final String type, final String msg) {
                   runOnUiThread(new Runnable() { public void run() {
-                      if (wv != null) wv.evaluateJavascript("window.onInst&&onInst(" + JSONObject.quote(type) + "," + JSONObject.quote(msg) + ")", null);
+                      if (wv != null) wv.evaluateJavascript("window.onNative&&onNative(" + JSONObject.quote(type) + "," + JSONObject.quote(msg) + ")", null);
                   }});
               }
           
-              final BroadcastReceiver recv = new BroadcastReceiver() {
-                  @Override
-                  public void onReceive(Context c, Intent it) {
-                      int st = it.getIntExtra(PackageInstaller.EXTRA_STATUS, -999);
-                      String m = it.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
-                      if (st == PackageInstaller.STATUS_PENDING_USER_ACTION) {
-                          Intent u = it.getParcelableExtra(Intent.EXTRA_INTENT);
-                          if (u != null) {
-                              u.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                              try { startActivity(u); } catch (Exception e) { js("e", "打不开系统安装确认：" + e); return; }
-                          }
-                          js("i", "请在系统弹框里点 安装（通常只有第一次需要）");
-                      } else if (st == PackageInstaller.STATUS_SUCCESS) {
-                          js("ok", "安装完成！");
-                      } else {
-                          js("e", "安装失败（代码 " + st + "）：" + m);
-                      }
-                  }
-              };
+              void refresh() { if (wv != null) wv.evaluateJavascript("window.onAppResume&&onAppResume()", null); }
+          
+              @Override
+              protected void onResume() { super.onResume(); refresh(); }
+          
+              @Override
+              public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); }
+          
+              @Override
+              public void onBackPressed() { moveTaskToBack(true); }
+          
+              boolean has() {
+                  if (Build.VERSION.SDK_INT >= 30) return Environment.isExternalStorageManager();
+                  return checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+              }
           
               static String sig(PackageInfo p) {
                   try {
@@ -194,107 +187,80 @@ jobs:
                   } catch (Exception e) { return null; }
               }
           
-              static long vc(PackageInfo p) {
-                  return Build.VERSION.SDK_INT >= 28 ? p.getLongVersionCode() : p.versionCode;
-              }
+              static long vc(PackageInfo p) { return Build.VERSION.SDK_INT >= 28 ? p.getLongVersionCode() : p.versionCode; }
           
-              void doInstall(String url, String pkg) {
-                  File f = new File(getCacheDir(), "update.apk");
-                  try {
-                      HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-                      c.setInstanceFollowRedirects(true);
-                      c.setConnectTimeout(20000);
-                      c.setReadTimeout(60000);
-                      c.setRequestProperty("User-Agent", "vtn-uploader");
-                      int code = c.getResponseCode();
-                      if (code != 200) throw new Exception("下载失败 HTTP " + code);
-                      long total = c.getContentLength();
-                      InputStream in = c.getInputStream();
-                      FileOutputStream out = new FileOutputStream(f);
-                      byte[] buf = new byte[65536];
-                      long got = 0; int n, last = -1;
-                      while ((n = in.read(buf)) > 0) {
-                          out.write(buf, 0, n); got += n;
-                          int pct = total > 0 ? (int) (got * 100 / total) : -1;
-                          if (pct != last && pct % 5 == 0) { last = pct; js("p", String.valueOf(pct)); }
+              void doDownload(String url, String name, String pkg) {
+                  File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "VideoToNote");
+                  dir.mkdirs();
+                  File part = new File(dir, name + ".part");
+                  File dst = new File(dir, name);
+                  if (part.exists()) part.delete();
+                  long total = -1;
+                  Exception last = null;
+                  for (int attempt = 1; attempt <= 5; attempt++) {
+                      try {
+                          long have = part.exists() ? part.length() : 0;
+                          HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                          c.setInstanceFollowRedirects(true);
+                          c.setConnectTimeout(20000);
+                          c.setReadTimeout(30000);
+                          c.setRequestProperty("User-Agent", "vtn-uploader");
+                          if (have > 0) c.setRequestProperty("Range", "bytes=" + have + "-");
+                          int code = c.getResponseCode();
+                          if (code != 200 && code != 206) throw new Exception("HTTP " + code);
+                          if (code == 200) have = 0;
+                          long len = c.getContentLength();
+                          if (len > 0) total = have + len;
+                          InputStream in = c.getInputStream();
+                          FileOutputStream out = new FileOutputStream(part, have > 0);
+                          byte[] buf = new byte[65536];
+                          long got = have; int n, lastPct = -1;
+                          try {
+                              while ((n = in.read(buf)) > 0) {
+                                  out.write(buf, 0, n); got += n;
+                                  int pct = total > 0 ? (int) (got * 100 / total) : -1;
+                                  if (pct != lastPct) { lastPct = pct; js("p", String.valueOf(pct)); }
+                              }
+                          } finally { out.close(); in.close(); }
+                          if (total > 0 && part.length() < total) throw new Exception("连接中断，已下载 " + part.length() / 1024 + " KB");
+                          last = null;
+                          break;
+                      } catch (Exception e) {
+                          last = e;
+                          js("w", "第 " + attempt + " 次下载中断（" + e.getMessage() + "），" + (attempt < 5 ? "3 秒后从断点续传" : "放弃"));
+                          try { Thread.sleep(3000); } catch (Exception ignored) {}
                       }
-                      out.close(); in.close();
-                      js("i", "下载完成（" + (got / 1024) + " KB），检查版本和签名");
-          
-                      android.content.pm.PackageManager pm = getPackageManager();
-                      PackageInfo ai = pm.getPackageArchiveInfo(f.getPath(), android.content.pm.PackageManager.GET_SIGNATURES);
-                      if (ai == null) throw new Exception("下载的文件不是有效的 APK");
-                      if (!pkg.equals(ai.packageName)) throw new Exception("包名不对：APK 是 " + ai.packageName + "，应为 " + pkg);
-                      PackageInfo ii = null;
-                      try { ii = pm.getPackageInfo(pkg, android.content.pm.PackageManager.GET_SIGNATURES); } catch (Exception ignored) {}
-                      if (ii != null) {
-                          if (vc(ai) <= vc(ii)) { js("same", "已是最新：" + ii.versionName + "（" + vc(ii) + "），不用安装"); return; }
-                          String s1 = sig(ii), s2 = sig(ai);
-                          if (s2 == null) js("w", "读不到新包签名，交给系统检查");
-                          else if (!s2.equals(s1)) throw new Exception("签名不一致，已停止安装（保护笔记）。\n新包 " + s2.substring(0, 12) + "… 已装 " + (s1 == null ? "?" : s1.substring(0, 12)) + "…\n多半是仓库里的 vtn.jks 变了，先去找回旧的 vtn.jks");
-                          js("i", "签名一致，" + ii.versionName + "（" + vc(ii) + "） → " + ai.versionName + "（" + vc(ai) + "）");
-                      } else {
-                          js("i", "手机上还没装，将新装 " + ai.versionName + "（" + vc(ai) + "）");
-                      }
-          
-                      PackageInstaller pi = pm.getPackageInstaller();
-                      PackageInstaller.SessionParams sp = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-                      sp.setAppPackageName(pkg);
-                      if (Build.VERSION.SDK_INT >= 31) sp.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
-                      int id = pi.createSession(sp);
-                      PackageInstaller.Session s = pi.openSession(id);
-                      OutputStream o = s.openWrite("base.apk", 0, f.length());
-                      FileInputStream fi = new FileInputStream(f);
-                      while ((n = fi.read(buf)) > 0) o.write(buf, 0, n);
-                      fi.close();
-                      s.fsync(o);
-                      o.close();
-                      Intent i = new Intent(ACT_INST).setPackage(getPackageName());
-                      int fl = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
-                      PendingIntent p = PendingIntent.getBroadcast(this, id, i, fl);
-                      js("i", "正在安装…");
-                      s.commit(p.getIntentSender());
-                      s.close();
-                  } catch (Exception e) {
-                      js("e", e.getMessage() == null ? e.toString() : e.getMessage());
                   }
-              }
-          
-              void refresh() {
-                  if (wv != null) wv.evaluateJavascript("window.onAppResume&&onAppResume()", null);
-              }
-          
-              @Override
-              protected void onResume() { super.onResume(); refresh(); }
-          
-              @Override
-              public void onRequestPermissionsResult(int code, String[] p, int[] r) {
-                  super.onRequestPermissionsResult(code, p, r);
-                  refresh();
-              }
-          
-              @Override
-              public void onBackPressed() { moveTaskToBack(true); }
-          
-              boolean has() {
-                  if (Build.VERSION.SDK_INT >= 30) return Environment.isExternalStorageManager();
-                  return checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+                  if (last != null) { js("e", "下载失败：" + last.getMessage() + "。检查网络或 VPN 后重试"); return; }
+                  if (dst.exists()) dst.delete();
+                  if (!part.renameTo(dst)) { js("e", "保存文件失败"); return; }
+                  try {
+                      PackageManager pm = getPackageManager();
+                      PackageInfo ai = pm.getPackageArchiveInfo(dst.getPath(), PackageManager.GET_SIGNATURES);
+                      if (ai == null) { js("e", "下载的文件不是有效的 APK"); return; }
+                      String note = "APK 版本 " + ai.versionName + "（" + vc(ai) + "）";
+                      PackageInfo ii = null;
+                      try { ii = pm.getPackageInfo(pkg, PackageManager.GET_SIGNATURES); } catch (Exception ignored) {}
+                      if (ii != null) {
+                          String s1 = sig(ii), s2 = sig(ai);
+                          if (s1 != null && s2 != null && !s1.equals(s2)) js("w", "注意：签名和手机上已装的不一致，直接覆盖会失败。先检查仓库里的 vtn.jks");
+                          else note += "，签名一致";
+                          if (vc(ai) <= vc(ii)) js("w", "这个 APK 不比已装的新（已装 " + ii.versionName + "）");
+                      }
+                      js("i", note);
+                  } catch (Exception ignored) {}
+                  js("dl", dst.getAbsolutePath());
               }
           
               class Bridge {
-                  @JavascriptInterface
-                  public boolean hasAccess() { return has(); }
+                  @JavascriptInterface public boolean hasAccess() { return has(); }
           
                   @JavascriptInterface
                   public void requestAccess() {
                       runOnUiThread(new Runnable() { public void run() {
                           try {
-                              if (Build.VERSION.SDK_INT >= 30) {
-                                  startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                          Uri.parse("package:" + getPackageName())));
-                              } else {
-                                  requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
-                              }
+                              if (Build.VERSION.SDK_INT >= 30) startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:" + getPackageName())));
+                              else requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
                           } catch (Exception e) {
                               try { startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)); } catch (Exception ignored) {}
                           }
@@ -306,23 +272,20 @@ jobs:
                       JSONArray arr = new JSONArray();
                       try {
                           List<File> all = new ArrayList<File>();
-                          File dl = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                          File[] fs = dl.listFiles();
+                          File[] fs = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).listFiles();
                           if (fs != null) for (File f : fs) {
                               String n = f.getName().toLowerCase();
                               if (f.isFile() && (n.endsWith(".yml") || n.endsWith(".yaml"))) all.add(f);
                           }
-                          Collections.sort(all, new java.util.Comparator<File>() { public int compare(File a, File c) {
+                          Collections.sort(all, new Comparator<File>() { public int compare(File a, File c) {
                               boolean ba = a.getName().toLowerCase().contains("build"), bc = c.getName().toLowerCase().contains("build");
                               if (ba != bc) return ba ? -1 : 1;
                               return Long.compare(c.lastModified(), a.lastModified());
                           }});
                           for (File f : all) {
                               JSONObject o = new JSONObject();
-                              o.put("path", f.getAbsolutePath());
-                              o.put("name", f.getName());
-                              o.put("size", f.length());
-                              o.put("mtime", f.lastModified());
+                              o.put("path", f.getAbsolutePath()); o.put("name", f.getName());
+                              o.put("size", f.length()); o.put("mtime", f.lastModified());
                               arr.put(o);
                           }
                       } catch (Exception ignored) {}
@@ -336,68 +299,45 @@ jobs:
                           if (!f.isFile() || f.length() == 0 || f.length() > 5 * 1024 * 1024) return "";
                           byte[] buf = new byte[(int) f.length()];
                           FileInputStream in = new FileInputStream(f);
-                          try {
-                              int off = 0, n;
-                              while (off < buf.length && (n = in.read(buf, off, buf.length - off)) > 0) off += n;
-                          } finally { in.close(); }
+                          try { int off = 0, n; while (off < buf.length && (n = in.read(buf, off, buf.length - off)) > 0) off += n; }
+                          finally { in.close(); }
                           return Base64.encodeToString(buf, Base64.NO_WRAP);
-                      } catch (Exception e) {
-                          return "";
-                      }
-                  }
-          
-                  @JavascriptInterface
-                  public void openUrl(String url) {
-                      try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) {}
-                  }
-          
-                  String obPkg() {
-                      String[] ps = {"dev.imranr.obtainium", "dev.imranr.obtainium.fdroid"};
-                      for (String p : ps) {
-                          if (getPackageManager().getLaunchIntentForPackage(p) != null) return p;
-                      }
-                      return null;
-                  }
-          
-                  @JavascriptInterface
-                  public boolean hasObtainium() { return obPkg() != null; }
-          
-                  @JavascriptInterface
-                  public boolean canInstall() {
-                      return Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls();
-                  }
-          
-                  @JavascriptInterface
-                  public void requestInstallPerm() {
-                      try {
-                          startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
-                      } catch (Exception ignored) {}
+                      } catch (Exception e) { return ""; }
                   }
           
                   @JavascriptInterface
                   public String installedInfo(String pkg) {
                       try {
-                          PackageInfo p = getPackageManager().getPackageInfo(pkg, android.content.pm.PackageManager.GET_SIGNATURES);
+                          PackageInfo p = getPackageManager().getPackageInfo(pkg, PackageManager.GET_SIGNATURES);
                           JSONObject o = new JSONObject();
-                          o.put("name", p.versionName);
-                          o.put("code", vc(p));
-                          String sg = sig(p);
-                          o.put("sig", sg == null ? "" : sg.substring(0, 12));
+                          o.put("name", p.versionName); o.put("code", vc(p));
+                          String sg = sig(p); o.put("sig", sg == null ? "" : sg.substring(0, 12));
                           return o.toString();
                       } catch (Exception e) { return ""; }
                   }
           
                   @JavascriptInterface
-                  public void installFromUrl(final String url, final String pkg) {
-                      new Thread(new Runnable() { public void run() { doInstall(url, pkg); } }).start();
+                  public String listApps() {
+                      JSONArray arr = new JSONArray();
+                      try {
+                          PackageManager pm = getPackageManager();
+                          Intent i = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+                          List<ResolveInfo> rs = pm.queryIntentActivities(i, 0);
+                          for (ResolveInfo r : rs) {
+                              JSONObject o = new JSONObject();
+                              o.put("pkg", r.activityInfo.packageName);
+                              o.put("name", String.valueOf(r.loadLabel(pm)));
+                              arr.put(o);
+                          }
+                      } catch (Exception ignored) {}
+                      return arr.toString();
                   }
           
                   @JavascriptInterface
-                  public boolean openObtainium() {
-                      String p = obPkg();
-                      if (p == null) return false;
+                  public boolean openApp(String pkg) {
                       try {
-                          Intent i = getPackageManager().getLaunchIntentForPackage(p);
+                          Intent i = getPackageManager().getLaunchIntentForPackage(pkg);
+                          if (i == null) return false;
                           i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                           startActivity(i);
                           return true;
@@ -405,10 +345,18 @@ jobs:
                   }
           
                   @JavascriptInterface
+                  public void download(final String url, final String name, final String pkg) {
+                      new Thread(new Runnable() { public void run() { doDownload(url, name, pkg); } }).start();
+                  }
+          
+                  @JavascriptInterface
+                  public void openUrl(String url) {
+                      try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) {}
+                  }
+          
+                  @JavascriptInterface
                   public void toast(final String m) {
-                      runOnUiThread(new Runnable() { public void run() {
-                          Toast.makeText(MainActivity.this, m, Toast.LENGTH_SHORT).show();
-                      }});
+                      runOnUiThread(new Runnable() { public void run() { Toast.makeText(MainActivity.this, m, Toast.LENGTH_SHORT).show(); }});
                   }
           
                   @JavascriptInterface
@@ -420,23 +368,19 @@ jobs:
                   }
           
                   @JavascriptInterface
-                  public void notify(String title, String text) {
+                  public void notify(String title, String text, String pkg) {
                       try {
                           NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
                           Notification.Builder nb;
                           if (Build.VERSION.SDK_INT >= 26) {
                               nm.createNotificationChannel(new NotificationChannel("build", "编译结果", NotificationManager.IMPORTANCE_DEFAULT));
                               nb = new Notification.Builder(MainActivity.this, "build");
-                          } else {
-                              nb = new Notification.Builder(MainActivity.this);
-                          }
-                          Intent target = new Intent(MainActivity.this, MainActivity.class);
-                          String ob = obPkg();
-                          if (ob != null && title.contains("成功")) target = getPackageManager().getLaunchIntentForPackage(ob);
-                          PendingIntent pi = PendingIntent.getActivity(MainActivity.this, 0, target,
-                                  PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-                          nb.setSmallIcon(android.R.drawable.stat_sys_upload_done).setContentTitle(title).setContentText(text)
-                                  .setAutoCancel(true).setContentIntent(pi);
+                          } else nb = new Notification.Builder(MainActivity.this);
+                          Intent target = null;
+                          if (pkg != null && pkg.length() > 0) target = getPackageManager().getLaunchIntentForPackage(pkg);
+                          if (target == null) target = new Intent(MainActivity.this, MainActivity.class);
+                          PendingIntent pi = PendingIntent.getActivity(MainActivity.this, 0, target, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                          nb.setSmallIcon(android.R.drawable.stat_sys_download_done).setContentTitle(title).setContentText(text).setAutoCancel(true).setContentIntent(pi);
                           nm.notify(1, nb.build());
                       } catch (Exception ignored) {}
                   }
@@ -446,148 +390,184 @@ jobs:
           mkdir -p "$(dirname 'app/src/main/assets/index.html')"
           cat > 'app/src/main/assets/index.html' <<'EOF_H'
           <!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
-          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
           <title>build 上传助手</title><style>
-          body{margin:0;font-family:system-ui,sans-serif;background:#f4f6fa;color:#1f2937}
-          .w{max-width:760px;margin:auto;padding:16px}h1{font-size:21px;margin:6px 0 14px}
-          .c{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px #0001}
-          .c h2{font-size:15px;margin:0 0 10px}label{display:block;font-size:13px;color:#6b7280;margin:10px 0 4px}
-          input[type=text],input[type=password],input[type=number],select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;background:#fff}
-          .row{display:flex;gap:10px}.row>*{flex:1}.chk{display:flex;gap:6px;align-items:center;color:#1f2937;font-size:14px}
-          button{padding:11px 16px;border:0;border-radius:10px;font-size:15px;background:#e5e7eb;color:#111}
-          #go{background:#2563eb;color:#fff;width:100%;padding:16px;font-size:18px;font-weight:600}#go:disabled{opacity:.5}
-          .b{padding:2px 8px;border-radius:99px;font-size:12px}.ok{background:#dcfce7;color:#166534}.no{background:#fee2e2;color:#991b1b}
-          #newest{font-size:14px;margin-top:8px;color:#374151}#perm{display:none;background:#fff7ed;border:1px solid #fdba74}
-          #log{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:10px;font:13px/1.6 monospace;min-height:120px;white-space:pre-wrap}
+          :root{--bg:#f3f5f9;--card:#fff;--tx:#111827;--mu:#6b7280;--ln:#e5e7eb;--b:#2563eb;--g:#16a34a;--r:#dc2626;--y:#d97706}
+          *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+          body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx);font-size:15px}
+          .w{max-width:1100px;margin:auto;padding:14px 18px 40px}
+          .top{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}
+          .top h1{font-size:20px;margin:0}.ver{font-size:13px;color:var(--mu)}
+          .grid{display:grid;grid-template-columns:1fr;gap:14px}
+          @media(min-width:820px){.grid{grid-template-columns:1.15fr .85fr}}
+          .c{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 1px 2px #0000000d}
+          .c h2{font-size:14px;color:var(--mu);font-weight:600;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center}
+          .steps{display:flex;gap:6px;margin:4px 0 14px}
+          .sp{flex:1;text-align:center;font-size:12px;color:var(--mu)}
+          .sp i{display:block;height:6px;border-radius:3px;background:var(--ln);margin-bottom:6px}
+          .sp.on i{background:var(--b)}.sp.done i{background:var(--g)}.sp.bad i{background:var(--r)}
+          .sp.on{color:var(--b);font-weight:600}.sp.done{color:var(--g)}.sp.bad{color:var(--r);font-weight:600}
+          #st{font-size:20px;font-weight:700;margin:2px 0 4px}#sub{font-size:13px;color:var(--mu);min-height:18px}
+          .bar{height:8px;background:var(--ln);border-radius:4px;overflow:hidden;margin-top:10px;display:none}.bar b{display:block;height:100%;width:0;background:var(--b);transition:width .3s}
+          .file{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--ln);border-radius:12px;margin-top:14px}
+          .file .n{font-weight:600}.file .m{font-size:12px;color:var(--mu)}.file select{flex:1;min-width:0;border:0;font-size:15px;background:none;color:var(--tx)}
+          button{border:0;border-radius:12px;padding:11px 14px;font-size:15px;background:#eef0f4;color:var(--tx)}
+          button:active{opacity:.7}button:disabled{opacity:.45}
+          .main{width:100%;margin-top:12px;padding:15px;font-size:17px;font-weight:700;background:var(--b);color:#fff}
+          .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.acts button{background:#eff6ff;color:var(--b);font-size:14px;padding:9px 12px}
+          .acts button.pri{background:var(--g);color:#fff;font-weight:600}
+          .kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--ln);font-size:14px}.kv:last-child{border:0}
+          .kv span:first-child{color:var(--mu)}.kv span:last-child{text-align:right;max-width:65%;word-break:break-all}
+          .row{display:flex;gap:8px;margin-top:10px}.row>*{flex:1}
+          #log{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:10px;font:12.5px/1.6 monospace;max-height:280px;overflow:auto;white-space:pre-wrap;margin-top:8px}
+          #log:empty::before{content:"暂无记录";color:#64748b}
           .g{color:#4ade80}.r{color:#f87171}.y{color:#fbbf24}.d{color:#94a3b8}
-          .lk{display:inline-block;margin:8px 8px 0 0;padding:9px 13px;border-radius:10px;background:#eff6ff;color:#2563eb}
-          details summary{font-size:15px;font-weight:600;color:#374151}
-          </style></head><body><div class="w"><h1>build.yml 上传助手</h1>
-          <div class="c" id="perm"><h2>需要文件权限</h2><div style="font-size:14px">要自动读取"下载"文件夹里最新的 build.yml，请允许"所有文件访问权限"。</div><button style="margin-top:10px;background:#f97316;color:#fff" onclick="App.requestAccess()">去开启</button></div>
-          <div class="c"><h2>文件（自动选最新）</h2><select id="f"></select><div id="newest"></div><button style="margin-top:10px" onclick="loadFiles(true)">刷新</button></div>
-          <button id="go" onclick="run()">上传</button>
-          <div class="c" style="margin-top:14px"><h2>视频笔记更新</h2><div id="iv" style="font-size:14px">读取中…</div><div id="lv" style="font-size:14px;color:#6b7280;margin-top:4px"></div>
-          <div class="row" style="margin-top:10px"><button onclick="manual(checkLatest)">检查更新</button><button style="background:#16a34a;color:#fff" onclick="manual(doUpdate)">立即更新</button></div></div>
-          <div class="c" style="margin-top:14px"><h2>进度：<span id="st">等待开始</span></h2><div id="log"></div><div id="links"></div></div>
-          <div class="c"><h2>GitHub 授权 <span id="ts" class="b"></span></h2>
-          <div class="row"><input id="tok" type="password" placeholder="粘贴 token（需 repo + workflow 权限）"><button style="flex:0 0 auto" onclick="saveTok()">保存</button></div></div>
-          <div class="c"><details><summary>选项</summary><label>仓库</label><input id="repo" type="text">
-          <div class="row"><div><label>分支</label><input id="br" type="text"></div><div><label>最长等待（分钟）</label><input id="to" type="number" value="25"></div></div>
-          <label>视频笔记包名</label><input id="pkg" type="text"><label>仓库内路径</label><input id="tg" type="text">
-          <label class="chk"><input id="dry" type="checkbox">试运行（不提交）</label><label class="chk"><input id="nw" type="checkbox">上传后不跟踪编译</label><label class="chk"><input id="ai" type="checkbox" checked>编译成功后自动下载并安装</label><label class="chk"><input id="ob" type="checkbox">编译成功后打开 Obtainium（不自动安装时）</label>
-          <button style="margin-top:10px" onclick="saveOpt()">保存选项</button></details></div></div>
+          label{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
+          input[type=text],input[type=password],input[type=number],select.f{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;background:#fff}
+          .chk{display:flex;align-items:center;gap:8px;color:var(--tx);font-size:14px;margin:12px 0 0}
+          .pill{font-size:12px;padding:2px 8px;border-radius:99px;font-weight:600}.ok{background:#dcfce7;color:#166534}.no{background:#fee2e2;color:#991b1b}
+          .warn{background:#fff7ed;border:1px solid #fdba74;display:none}
+          details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-marker{display:none}
+          .tl{font-size:13px;color:var(--b)}
+          </style></head><body><div class="w">
+          <div class="top"><h1>build 上传助手</h1><span class="ver" id="tokpill"></span></div>
+          <div class="c warn" id="perm" style="margin-bottom:14px"><b>需要文件权限</b><div style="font-size:14px;margin:6px 0 10px">用于读取"下载"里的 build.yml，并把 APK 保存到 下载/VideoToNote。</div><button style="background:#f97316;color:#fff" onclick="App.requestAccess()">去开启</button></div>
+          <div class="grid"><div>
+          <div class="c">
+          <div class="steps"><div class="sp" id="s0"><i></i>上传</div><div class="sp" id="s1"><i></i>编译</div><div class="sp" id="s2"><i></i>下载</div><div class="sp" id="s3"><i></i>打开 DSH GO</div></div>
+          <div id="st">准备就绪</div><div id="sub">选好文件后点上传</div><div class="bar" id="bar"><b id="barb"></b></div>
+          <div class="file"><div style="flex:1;min-width:0"><select id="f"></select><div class="m" id="newest"></div></div><button onclick="loadFiles(true)">刷新</button></div>
+          <button class="main" id="go" onclick="act(run)">上传并编译</button>
+          <div class="acts" id="links"></div></div>
+          <div class="c" style="margin-top:14px"><details id="logbox"><summary><h2 style="margin:0">运行日志 <span class="tl">展开</span></h2></summary><div id="log"></div></details></div>
+          </div><div>
+          <div class="c"><h2>视频笔记</h2>
+          <div class="kv"><span>手机上</span><span id="iv">读取中…</span></div>
+          <div class="kv"><span>线上最新</span><span id="lv">未检查</span></div>
+          <div class="kv"><span>已下载</span><span id="dv">无</span></div>
+          <div class="row"><button onclick="act(checkLatest)">检查更新</button><button style="background:var(--g);color:#fff" onclick="act(downloadLatest)">下载最新版</button></div></div>
+          <div class="c" style="margin-top:14px"><h2>DSH GO</h2>
+          <div class="kv"><span>目标应用</span><span id="dshv">未设置</span></div>
+          <label>更换目标应用</label><select class="f" id="appsel"></select>
+          <div class="row"><button onclick="openDsh(true)">现在打开</button></div></div>
+          <div class="c" style="margin-top:14px"><details><summary><h2 style="margin:0">设置 <span class="tl">展开</span></h2></summary>
+          <label>GitHub token（需 repo + workflow 写权限）</label><div class="row" style="margin-top:0"><input id="tok" type="password" placeholder="粘贴后点保存"><button style="flex:0 0 auto" onclick="saveTok()">保存</button></div>
+          <label>仓库</label><input id="repo" type="text">
+          <div class="row" style="margin-top:0"><div><label>分支</label><input id="br" type="text"></div><div><label>最长等待（分钟）</label><input id="to" type="number"></div></div>
+          <label>仓库内路径</label><input id="tg" type="text"><label>视频笔记包名</label><input id="pkg" type="text">
+          <label class="chk"><input id="auto" type="checkbox">编译成功后自动下载并打开 DSH GO</label>
+          <label class="chk"><input id="dry" type="checkbox">试运行（只检查，不提交）</label>
+          <button style="margin-top:12px;width:100%" onclick="saveOpt()">保存设置</button></details></div>
+          </div></div></div>
           <script>
           const $=i=>document.getElementById(i),API="https://api.github.com",LS=localStorage;
-          const DEF={repo:"jlynolson53-hue/VideoToNote-Lite",br:"main",tg:".github/workflows/build.yml",pkg:"com.vtn.lite"};
-          let busy=false,files=[];
-          function showTok(){const t=LS.getItem("vtn_tok");$("ts").textContent=t?"已就绪":"未设置";$("ts").className="b "+(t?"ok":"no")}
-          function saveTok(){const t=$("tok").value.trim();if(!t)return App.toast("先粘贴 token");LS.setItem("vtn_tok",t);$("tok").value="";showTok();App.toast("已保存")}
-          function loadOpt(){const o=JSON.parse(LS.getItem("vtn_opt")||"{}");for(const k in DEF)$(k).value=o[k]||DEF[k];$("ob").checked=o.ob===true;$("ai").checked=o.ai!==false}
-          function saveOpt(){const o={};for(const k in DEF)o[k]=$(k).value.trim();o.ob=$("ob").checked;o.ai=$("ai").checked;LS.setItem("vtn_opt",JSON.stringify(o));App.toast("已保存")}
-          function say(m,c){const d=document.createElement("div");d.className=c||"";d.textContent="["+new Date().toTimeString().slice(0,8)+"] "+m;$("log").appendChild(d);d.scrollIntoView({block:"nearest"})}
-          function link(t,u){const b=document.createElement("button");b.className="lk";b.textContent=t;b.onclick=()=>App.openUrl(u);$("links").appendChild(b)}
-          function st(s){$("st").textContent=s}
+          const DEF={repo:"jlynolson53-hue/VideoToNote-Lite",br:"main",tg:".github/workflows/build.yml",pkg:"com.vtn.lite",to:"25"};
+          let busy=false,files=[],apps=[],dlWait=null;
           const kb=n=>(n/1024).toFixed(1)+" KB",sleep=ms=>new Promise(r=>setTimeout(r,ms)),p2=n=>String(n).padStart(2,"0");
           function fmt(t){const d=new Date(t);return p2(d.getMonth()+1)+"-"+p2(d.getDate())+" "+p2(d.getHours())+":"+p2(d.getMinutes())}
-          function loadFiles(manual){
-           const ok=App.hasAccess();$("perm").style.display=ok?"none":"block";if(!ok){$("f").innerHTML="<option value=''>未授权</option>";return}
-           files=JSON.parse(App.listYml());const f=$("f");f.innerHTML="";
-           if(!files.length){f.innerHTML="<option value=''>下载文件夹里没有 .yml</option>";$("newest").textContent="";return}
-           files.forEach(x=>{const o=document.createElement("option");o.value=x.path;o.textContent=x.name+"  ("+kb(x.size)+"，"+fmt(x.mtime)+")";f.appendChild(o)});
-           f.value=files[0].path;$("newest").textContent="已选最新："+files[0].name+"，修改于 "+fmt(files[0].mtime);
-           if(manual)App.toast("已刷新")}
-          window.onAppResume=()=>{showInst();if(!busy)loadFiles(false)};
-          function showInst(){const s=App.installedInfo($("pkg").value.trim());
-           if(!s){$("iv").textContent="手机上没装视频笔记（或包名不对）";return}
-           const i=JSON.parse(s);$("iv").textContent="已安装："+i.name+"（"+i.code+"）  签名 "+i.sig}
-          async function latestRel(){const repo=$("repo").value.trim().replace(/^\/|\/$/g,"");
-           const r=await gh("/repos/"+repo+"/releases?per_page=15");
-           if(r.s!=200)throw new Fail("读取发布列表失败（HTTP "+r.s+"）");
-           for(const x of r.j){if(x.draft||x.prerelease)continue;
-            const a=(x.assets||[]).find(a=>/\.apk$/i.test(a.name)&&!/BuildUploader/i.test(a.name));if(a)return{rel:x,asset:a}}
-           throw new Fail("没找到视频笔记的 APK 发布")}
-          async function checkLatest(){st("检查中");const {rel,asset}=await latestRel();
-           const t=(rel.name||rel.tag_name)+" · "+asset.name+"（"+(asset.size/1048576).toFixed(1)+" MB，"+fmt(rel.published_at)+"）";
-           $("lv").textContent="线上最新："+t;say("线上最新："+t);showInst();st("检查完成")}
-          let instDone=null;
-          window.onInst=(t,m)=>{if(t=="p"){st("下载中 "+m+"%");return}
-           say(m,t=="e"?"r":(t=="ok"||t=="same")?"g":t=="w"?"y":"d");
-           if(t=="ok"||t=="same"||t=="e"){if(t=="ok")App.notify("视频笔记已更新","安装完成，可以打开了");
-            if(t=="e")App.notify("视频笔记更新失败",m.slice(0,60));
-            showInst();st(t=="e"?"安装失败":t=="ok"?"已更新":"已是最新");if(instDone){instDone(t);instDone=null}}};
-          async function doUpdate(){
-           if(!App.canInstall()){say("需要允许 安装未知应用：已打开设置，开启后回来点 立即更新","y");App.requestInstallPerm();st("等待授权");return}
-           st("查找最新版");const {rel,asset}=await latestRel();
-           say("最新发布："+(rel.name||rel.tag_name)+" · "+asset.name+"（"+(asset.size/1048576).toFixed(1)+" MB）");
-           st("下载中");App.keepScreen(true);
-           try{const res=await new Promise(r=>{instDone=r;App.installFromUrl(asset.browser_download_url,$("pkg").value.trim());
-             setTimeout(()=>{if(instDone){instDone("timeout");instDone=null}},600000)});
-            if(res=="timeout"){say("10 分钟没等到安装结果，可能还在等你确认","y");st("等待超时")}}
-           finally{App.keepScreen(false)}}
-          async function manual(fn){if(busy)return App.toast("正在进行中");busy=true;$("log").innerHTML="";$("links").innerHTML="";
-           try{await fn()}catch(e){say(e.message,"r");st("出错")}finally{busy=false}}
-          async function gh(path,opt={}){const h={Accept:"application/vnd.github+json",Authorization:"token "+LS.getItem("vtn_tok")};
-           if(opt.body)h["Content-Type"]="application/json";
-           try{const r=await fetch(API+path,{method:opt.method||"GET",headers:h,body:opt.body?JSON.stringify(opt.body):undefined,cache:"no-store"});
-            let j=null;try{j=await r.json()}catch(e){}return{s:r.status,j}}catch(e){return{s:0,j:{message:String(e)}}}}
           class Fail extends Error{}
-          async function run(){$("log").innerHTML="";$("links").innerHTML="";$("go").disabled=true;busy=true;
-           try{await main()}catch(e){say(e.message,"r");st("出错")}finally{$("go").disabled=false;busy=false}}
-          async function main(){
+          function say(m,c){const d=document.createElement("div");d.className=c||"";d.textContent="["+new Date().toTimeString().slice(0,8)+"] "+m;$("log").appendChild(d);$("log").scrollTop=1e9;if(c=="r")$("logbox").open=true}
+          function st(t,sub){$("st").textContent=t;if(sub!==undefined)$("sub").textContent=sub}
+          function step(i,state){for(let k=0;k<4;k++){const e=$("s"+k);e.className="sp"+(k<i?" done":k==i?" "+(state||"on"):"")}}
+          function bar(p){$("bar").style.display=p==null?"none":"block";$("barb").style.width=(p<0?30:p)+"%"}
+          function btn(t,fn,pri){const b=document.createElement("button");b.textContent=t;if(pri)b.className="pri";b.onclick=fn;$("links").appendChild(b)}
+          function link(t,u){btn(t,()=>App.openUrl(u))}
+          function showTok(){const t=LS.getItem("vtn_tok");$("tokpill").innerHTML=t?'<span class="pill ok">已授权</span>':'<span class="pill no">未设置 token</span>'}
+          function saveTok(){const t=$("tok").value.trim();if(!t)return App.toast("先粘贴 token");LS.setItem("vtn_tok",t);$("tok").value="";showTok();App.toast("已保存")}
+          function opt(){return JSON.parse(LS.getItem("vtn_opt")||"{}")}
+          function loadOpt(){const o=opt();for(const k in DEF)$(k).value=o[k]||DEF[k];$("auto").checked=o.auto!==false}
+          function saveOpt(){const o=opt();for(const k in DEF)o[k]=$(k).value.trim();o.auto=$("auto").checked;LS.setItem("vtn_opt",JSON.stringify(o));App.toast("已保存")}
+          function dshPkg(){return opt().dsh||""}
+          function loadApps(){apps=JSON.parse(App.listApps()).sort((a,b)=>a.name.localeCompare(b.name,"zh"));
+           let cur=dshPkg();if(!cur){const h=apps.find(a=>/dsh/i.test(a.name)||/dsh/i.test(a.pkg));if(h){cur=h.pkg;const o=opt();o.dsh=cur;LS.setItem("vtn_opt",JSON.stringify(o))}}
+           const s=$("appsel");s.innerHTML='<option value="">（选择应用）</option>';
+           apps.forEach(a=>{const e=document.createElement("option");e.value=a.pkg;e.textContent=a.name;s.appendChild(e)});s.value=cur;
+           const a=apps.find(x=>x.pkg==cur);$("dshv").textContent=a?a.name:(cur?"未安装："+cur:"未设置，请在下面选择")}
+          $("appsel").onchange=()=>{const o=opt();o.dsh=$("appsel").value;LS.setItem("vtn_opt",JSON.stringify(o));loadApps();App.toast("已设为目标应用")};
+          function openDsh(manual){const p=dshPkg();if(!p){App.toast("请先选择 DSH GO");return false}
+           const ok=App.openApp(p);if(!ok&&manual)App.toast("打不开，请重新选择");return ok}
+          function loadFiles(manual){const ok=App.hasAccess();$("perm").style.display=ok?"block":"none";$("perm").style.display=ok?"none":"block";
+           const f=$("f");f.innerHTML="";if(!ok){f.innerHTML="<option value=''>未授权</option>";return}
+           files=JSON.parse(App.listYml());
+           if(!files.length){f.innerHTML="<option value=''>下载文件夹里没有 .yml</option>";$("newest").textContent="";return}
+           files.forEach(x=>{const o=document.createElement("option");o.value=x.path;o.textContent=x.name;f.appendChild(o)});f.value=files[0].path;showFile();if(manual)App.toast("已刷新")}
+          function showFile(){const x=files.find(y=>y.path==$("f").value);$("newest").textContent=x?kb(x.size)+" · 修改于 "+fmt(x.mtime)+(x==files[0]?" · 最新":""):""}
+          $("f").onchange=showFile;
+          function showInst(){const s=App.installedInfo($("pkg").value.trim());if(!s){$("iv").textContent="未安装";return}
+           const i=JSON.parse(s);$("iv").textContent=i.name+"（"+i.code+"）"}
+          window.onAppResume=()=>{showInst();loadApps();if(!busy)loadFiles(false)};
+          async function gh(path,o={}){const h={Accept:"application/vnd.github+json",Authorization:"token "+LS.getItem("vtn_tok")};if(o.body)h["Content-Type"]="application/json";
+           try{const r=await fetch(API+path,{method:o.method||"GET",headers:h,body:o.body?JSON.stringify(o.body):undefined,cache:"no-store"});let j=null;try{j=await r.json()}catch(e){}return{s:r.status,j}}catch(e){return{s:0,j:{message:String(e)}}}}
+          function repo(){return $("repo").value.trim().replace(/^\/|\/$/g,"")}
+          async function act(fn){if(busy)return App.toast("正在进行中");busy=true;$("go").disabled=true;$("links").innerHTML="";$("log").innerHTML="";bar(null);
+           try{await fn()}catch(e){say(e.message,"r");st("出错了",e.message)}finally{busy=false;$("go").disabled=false;App.keepScreen(false)}}
+          async function latestRel(){const r=await gh("/repos/"+repo()+"/releases?per_page=15");if(r.s!=200)throw new Fail("读取发布列表失败（HTTP "+r.s+"）");
+           for(const x of r.j){if(x.draft||x.prerelease)continue;const a=(x.assets||[]).find(a=>/\.apk$/i.test(a.name)&&!/BuildUploader/i.test(a.name));if(a)return{rel:x,asset:a}}
+           throw new Fail("没找到视频笔记的 APK 发布")}
+          async function checkLatest(){st("检查中","");const {rel,asset}=await latestRel();const t=(rel.name||rel.tag_name);
+           $("lv").textContent=t;say("线上最新："+t+" · "+asset.name);showInst();st("检查完成",t)}
+          window.onNative=(t,m)=>{if(t=="p"){bar(+m);$("sub").textContent=m>=0?"已下载 "+m+"%":"下载中…";return}
+           if(t=="dl"){if(dlWait){dlWait({ok:true,path:m});dlWait=null}return}
+           say(m,t=="e"?"r":t=="w"?"y":"d");if(t=="e"&&dlWait){dlWait({ok:false,msg:m});dlWait=null}};
+          async function downloadLatest(fromBuild){
+           if(!App.hasAccess()){App.requestAccess();throw new Fail("需要文件权限才能保存 APK")}
+           step(2);st("查找最新版","");const {rel,asset}=await latestRel();const t=rel.name||rel.tag_name;$("lv").textContent=t;
+           say("开始下载："+t+" · "+(asset.size/1048576).toFixed(1)+" MB");st("下载中",t);bar(0);App.keepScreen(true);
+           const name="VideoToNote-"+(rel.tag_name||"latest")+".apk";
+           const res=await new Promise(r=>{dlWait=r;App.download(asset.browser_download_url,name,$("pkg").value.trim());setTimeout(()=>{if(dlWait){dlWait({ok:false,msg:"下载超过 10 分钟"});dlWait=null}},600000)});
+           bar(null);if(!res.ok){step(2,"bad");throw new Fail(res.msg)}
+           $("dv").textContent=res.path.replace(/^.*\/Download\//,"下载/");say("已保存："+res.path,"g");
+           step(3);st("下载完成","已保存到 "+$("dv").textContent);
+           btn("打开 DSH GO",()=>openDsh(true),true);
+           App.notify("新版视频笔记已下载",t+"，点开进入 DSH GO",dshPkg());
+           if(fromBuild!==true||$("auto").checked){if(openDsh(false)){say("已打开 DSH GO","d");step(4)}else say("没有设置或打不开 DSH GO，请在右侧选择","y")}}
+          async function run(){
            const path=$("f").value;if(!path)throw new Fail("没有可上传的文件");
-           if(!LS.getItem("vtn_tok"))throw new Fail("还没设置 token，请在下方 GitHub 授权里粘贴保存");
-           const repo=$("repo").value.trim().replace(/^\/|\/$/g,""),br=$("br").value.trim()||"main",tg=$("tg").value.trim().replace(/^\//,"");
+           if(!LS.getItem("vtn_tok"))throw new Fail("还没设置 token，请在 设置 里填写");
+           const br=$("br").value.trim()||"main",tg=$("tg").value.trim().replace(/^\//,""),R=repo();
            const info=files.find(x=>x.path==path)||{name:path};
-           st("检查文件");const content=App.readB64(path);if(!content)throw new Fail("读不到文件，或文件是空的");
+           step(0);st("检查文件",info.name);const content=App.readB64(path);if(!content)throw new Fail("读不到文件，或文件是空的");
            const bin=atob(content),raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);
            const text=new TextDecoder().decode(raw);say("源文件："+info.name+"（"+kb(raw.length)+"）");
            if(!/^name:\s*\S/m.test(text)||!/^jobs:/m.test(text))throw new Fail("这个文件不像 GitHub Actions 工作流（缺 name: 或 jobs:）");
-           if(!/^on:/m.test(text))say("提醒：没找到 on: 触发段","y");
-           say("内容检查：正常"+(text.includes("vtn.jks")?"，引用了 vtn.jks 签名":""),"d");
-           const fp="/repos/"+repo+"/contents/"+tg.split("/").map(encodeURIComponent).join("/");
+           const fp="/repos/"+R+"/contents/"+tg.split("/").map(encodeURIComponent).join("/");
            st("对比线上文件");let r=await gh(fp+"?ref="+encodeURIComponent(br)),online=null;
            if(r.s==200)online=r.j;
-           else if(r.s==404){const b=await gh("/repos/"+repo+"/git/ref/heads/"+encodeURIComponent(br));if(b.s==404)throw new Fail("仓库或分支 '"+br+"' 不存在");say("线上没有此文件，将新建","y")}
-           else if(r.s==401||r.s==403)throw new Fail("授权失效（HTTP "+r.s+"），请重新保存 token");
-           else if(r.s==0)throw new Fail("连不上 GitHub，请检查网络/VPN："+r.j.message);
-           else throw new Fail("读取线上文件失败（HTTP "+r.s+"）："+(r.j&&r.j.message||""));
-           if(online&&(online.content||"").replace(/\s/g,"")===content){say("线上文件和这个完全一致，不用上传（sha "+online.sha.slice(0,7)+"）","g");st("无需上传");return}
-           const m=info.name.match(/v\d+\.\d+(?:\.\d+)?/i);
-           const now=new Date(),ver=m?m[0]:"";
-           const msg="更新 build.yml"+(ver?"（"+ver+"）":"")+" - "+now.getFullYear()+"-"+p2(now.getMonth()+1)+"-"+p2(now.getDate())+" "+p2(now.getHours())+":"+p2(now.getMinutes());
-           say("待上传："+repo+" : "+tg+"（分支 "+br+"）");say(online?"将覆盖线上 sha "+online.sha.slice(0,7):"本次为新建","d");say("提交说明："+msg,"d");
-           if($("dry").checked){say("试运行：未实际提交","y");st("试运行完成");return}
+           else if(r.s==404){const b=await gh("/repos/"+R+"/git/ref/heads/"+encodeURIComponent(br));if(b.s==404)throw new Fail("仓库或分支 '"+br+"' 不存在");say("线上没有此文件，将新建","y")}
+           else if(r.s==401||r.s==403)throw new Fail("token 无效或没权限（HTTP "+r.s+"）");
+           else if(r.s==0)throw new Fail("连不上 GitHub，请检查网络/VPN");
+           else throw new Fail("读取线上文件失败（HTTP "+r.s+"）");
+           if(online&&(online.content||"").replace(/\s/g,"")===content){step(0,"done");st("无需上传","线上 build.yml 和这个文件完全一致");say("内容一致，未上传","g");return}
+           const now=new Date(),msg="更新 build.yml - "+now.getFullYear()+"-"+p2(now.getMonth()+1)+"-"+p2(now.getDate())+" "+p2(now.getHours())+":"+p2(now.getMinutes());
+           say("提交说明："+msg,"d");
+           if($("dry").checked){st("试运行完成","未实际提交");return}
            st("上传中");let res=null;
            for(let a=0;a<2;a++){const body={message:msg,content,branch:br};if(online)body.sha=online.sha;
             r=await gh(fp,{method:"PUT",body});if(r.s==200||r.s==201){res=r.j;break}
             const det=r.j&&r.j.message||"";
             if((r.s==409||r.s==422)&&a==0){const r2=await gh(fp+"?ref="+encodeURIComponent(br));if(r2.s==200){online=r2.j;say("线上文件刚被改过，重试一次","y");continue}}
-            if((r.s==401||r.s==403||r.s==404)&&/workflow/i.test(det))throw new Fail("GitHub 拒绝写 workflow 文件：token 缺 workflow 权限");
-            if(r.s==0)throw new Fail("连不上 GitHub："+det);
+            if(r.s==403&&/personal access token/i.test(det))throw new Fail("token 没有写权限：需要 Contents 和 Workflows 读写权限");
+            if(/workflow/i.test(det))throw new Fail("token 缺 workflow 权限");
             throw new Fail("上传失败（HTTP "+r.s+"）："+det)}
-           const sha=res.commit.sha;say("上传成功！提交 "+sha.slice(0,7),"g");link("查看提交",res.commit.html_url);link("Actions 页面","https://github.com/"+repo+"/actions");
-           if($("nw").checked){st("已上传");return}
-           st("等待编译");say("正在等 GitHub 编译（通常 5-10 分钟）");App.keepScreen(true);
-           try{const t0=Date.now(),dl=t0+(+$("to").value||25)*60000;let last="";
+           const sha=res.commit.sha;say("上传成功，提交 "+sha.slice(0,7),"g");link("查看提交",res.commit.html_url);
+           step(1);st("等待编译","通常 2-10 分钟，请让本 App 留在前台");App.keepScreen(true);
+           const t0=Date.now(),dl=t0+(+$("to").value||25)*60000;let last="";
            while(Date.now()<dl){await sleep(10000);
-            const q=await gh("/repos/"+repo+"/actions/runs?head_sha="+sha+"&per_page=10");if(q.s!=200)continue;
-            const rn=(q.j.workflow_runs||[]).find(x=>x.head_sha==sha);const sec=Math.round((Date.now()-t0)/1000),tm=Math.floor(sec/60)+":"+p2(sec%60);
-            if(!rn){st("等待编译开始（"+tm+"）");continue}
-            st(({queued:"排队中",in_progress:"编译中"}[rn.status]||rn.status)+"（已用 "+tm+"）");
+            const q=await gh("/repos/"+R+"/actions/runs?head_sha="+sha+"&per_page=10");if(q.s!=200)continue;
+            const rn=(q.j.workflow_runs||[]).find(x=>x.head_sha==sha&&/build/i.test(x.path||x.name||""))||(q.j.workflow_runs||[]).find(x=>x.head_sha==sha);
+            const sec=Math.round((Date.now()-t0)/1000),tm=Math.floor(sec/60)+":"+p2(sec%60);
+            if(!rn){st("等待编译开始","已等 "+tm);continue}
+            st(({queued:"排队中",in_progress:"编译中"}[rn.status]||"编译中"),"已用 "+tm);
             const k=rn.status+"/"+rn.conclusion;if(k==last)continue;last=k;
-            if(rn.status=="queued")say("排队中...","d");
-            else if(rn.status=="in_progress"){say("编译中...","d");link("本次编译日志",rn.html_url)}
+            if(rn.status=="in_progress"){say("编译中…","d");link("编译日志",rn.html_url)}
             else if(rn.status=="completed"){
-             if(rn.conclusion=="success"){say("编译成功！用时 "+tm,"g");const hasOb=App.hasObtainium();
-              if(hasOb){const b=document.createElement("button");b.className="lk";b.textContent="打开 Obtainium 更新";b.onclick=()=>App.openObtainium();$("links").appendChild(b)}
-              link("下载新 APK","https://github.com/"+repo+"/releases/latest");st("完成");
-              App.notify($("ai").checked?"编译完成":"编译成功",$("ai").checked?"正在自动下载安装":(hasOb?"点开进入 Obtainium 更新":"点开下载新 APK"));
-              if($("ai").checked){say("开始自动更新视频笔记","d");await doUpdate()}
-              else if(hasOb&&$("ob").checked){say("3 秒后打开 Obtainium，进去后下拉刷新检查更新","d");await sleep(3000);App.openObtainium()}
-              else if(!hasOb)say("没检测到 Obtainium，已改为提供下载链接","y");return}
-             say("编译失败（"+rn.conclusion+"）","r");link("失败日志",rn.html_url);st("编译失败");App.notify("编译失败","打开查看日志");return}}
-           say("还没等到编译结束，可点 Actions 页面看进度","y");st("等待超时")}finally{App.keepScreen(false)}}
-          loadOpt();showTok();loadFiles(false);showInst();
+             if(rn.conclusion=="success"){say("编译成功，用时 "+tm,"g");
+              if($("auto").checked){await sleep(3000);await downloadLatest(true)}
+              else{step(2);st("编译成功","点下面按钮下载");btn("下载最新版",()=>act(downloadLatest),true);App.notify("编译成功","打开上传助手下载","")}
+              return}
+             step(1,"bad");st("编译失败",rn.conclusion);link("失败日志",rn.html_url);App.notify("编译失败","打开查看日志","");return}}
+           st("等待超时","可到 Actions 页面看进度");link("Actions 页面","https://github.com/"+R+"/actions")}
+          loadOpt();showTok();loadFiles(false);showInst();loadApps();
           </script></body></html>
           EOF_H
 
