@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 46
-                  versionName "1.8.9"
+                  versionCode 47
+                  versionName "1.9.0"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -2446,6 +2446,11 @@ jobs:
           $("subOnly").onclick = () => run(true);
           // ===== v1.4.1：公式 + 表格 + 过滤无关截图 + AI 输入 + 多轮修改 =====
           function fixTex(md) {
+            // v1.9.0：多行公式块合并、裸露的 \begin{...} 环境包上 $$、纯英文单词误用 $ 改为斜体
+            md = String(md || "").replace(/\r/g, "");
+            md = md.replace(/\$\$([\s\S]+?)\$\$/g, (m, t) => t.includes("\n") ? "\n$$" + t.split("\n").map(x => x.trim()).filter(Boolean).join(" ") + "$$\n" : m);
+            md = md.replace(/(^|\n)([^\n$]*?\\begin\{([a-zA-Z*]+)\}[\s\S]*?\\end\{\3\}[^\n$]*)(?=\n|$)/g, (m, a, t) => t.includes("$") ? m : a + "$$" + t.split("\n").map(x => x.trim()).filter(Boolean).join(" ") + "$$");
+            md = md.replace(/(^|[^$\\])\$([A-Za-z][A-Za-z '’-]{2,}[A-Za-z])\$(?!\$)/g, (m, a, w) => a + "*" + w + "*");
             // 先把多行 $$ 块合成一行，避免下面删掉单独的 $$ 行
             md = String(md || "").replace(/(^|\n)[ \t]*\$\$[ \t]*\n([\s\S]*?)\n[ \t]*\$\$[ \t]*(?=\n|$)/g, (m, a, t) => a + "$$" + t.trim().replace(/\n+/g, " \\\\ ") + "$$");
             md = md.replace(/(^|\n)\\\[\s*([\s\S]*?)\s*\\\](?=\n|$)/g, (m, a, t) => a + "$$" + t.replace(/\n+/g, " ") + "$$");
@@ -3018,8 +3023,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.8.9";
+          const APP_VER = "1.9.0";
           const CHANGELOG = [
+            ["1.9.0", "修复公式显示错误（阅读页和导出 PDF）：多行公式块、没包 $$ 的 cases 等环境会显示成红色源码；纯英文单词被当成公式显示成怪斜体"],
             ["1.8.9", "修复宋体不生效：字体路径写错；导出 PDF 时先等宋体加载完再排版（之前来不及加载就用了系统黑体）；构建时检查宋体是否下载完整；生成时常驻通知栏：启动时就申请通知权限，通知被关闭时提示去开启；识图默认改用笔记模型（DeepSeek V4.1 Flash）直接看图，失败自动退回硅基流动千问 VL，可在设置里切换"],
             ["1.8.8", "修复导出 PDF 时部分行字与字之间出现大空格（取消两端对齐）；内置思源宋体，导出 PDF 可选宋体或黑体，笔记阅读页也可切换宋体"],
             ["1.8.7", "导出 PDF 重做：用 Paged.js 按 A4 分页，App 直接生成 PDF 文件（不再弹系统打印），页边距、双栏、页码都由 App 控制，图片和公式不跨页；修复导出面板里已选按钮变成空白"],
