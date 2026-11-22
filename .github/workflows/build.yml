@@ -530,6 +530,7 @@ jobs:
               @Override
               protected void onCreate(Bundle b) {
                   super.onCreate(b);
+                  try { if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 7); } catch (Exception ignored) { }
                   web = new WebView(this);
                   {
                       // v1.7.8：启动时按上次主题（或系统深浅色）先设底色，防止白闪
@@ -843,6 +844,16 @@ jobs:
                             .setAutoCancel(true).setContentIntent(pi);
                           nm.notify(2, nb.build());
                       } catch (Exception ignored) { }
+                  }
+
+                  @JavascriptInterface
+                  public boolean notifOk() {
+                      try { return ((android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).areNotificationsEnabled(); } catch (Exception e) { return true; }
+                  }
+
+                  @JavascriptInterface
+                  public void openNotifSet() {
+                      runOnUiThread(() -> { try { Intent i = new Intent("android.settings.APP_NOTIFICATION_SETTINGS"); i.putExtra("android.provider.extra.APP_PACKAGE", getPackageName()); startActivity(i); } catch (Exception ignored) { } });
                   }
 
                   @JavascriptInterface
@@ -1352,8 +1363,8 @@ jobs:
           if curl -fsSL --retry 3 "$NS/400.css" -o /tmp/ns.css; then
             grep -o 'noto-serif-sc-[0-9]*-400-normal\.woff2' /tmp/ns.css | sort -u > /tmp/nsl.txt
             xargs -P 8 -I{} curl -fsSL --retry 3 "$NS/files/{}" -o "app/src/main/assets/fonts/{}" < /tmp/nsl.txt || true
-            sed -e 's#url(./files/#url(fonts/#g' -e 's#, url([^)]*\.woff) format(.woff.)##g' /tmp/ns.css > app/src/main/assets/fonts/serif.css
-            ls app/src/main/assets/fonts | wc -l
+            sed -e 's#url(./files/#url(#g' -e 's#, url([^)]*\.woff) format(.woff.)##g' /tmp/ns.css > app/src/main/assets/fonts/serif.css
+            n=$(ls app/src/main/assets/fonts/*.woff2 | wc -l); echo "宋体分片 $n 个"; test "$n" -gt 80
           else
             echo "/* 宋体下载失败，使用系统字体 */" > app/src/main/assets/fonts/serif.css
           fi
@@ -3009,7 +3020,7 @@ jobs:
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
           const APP_VER = "1.8.9";
           const CHANGELOG = [
-            ["1.8.9", "修复 1.8.8 更新日志少一个逗号导致后半段脚本不运行：宋体切换、生成时常驻通知栏（后台不中断）恢复正常；识图默认改用笔记模型（DeepSeek V4.1 Flash）直接看图，失败自动退回硅基流动千问 VL，可在设置里切换"],
+            ["1.8.9", "修复宋体不生效：字体路径写错；导出 PDF 时先等宋体加载完再排版（之前来不及加载就用了系统黑体）；构建时检查宋体是否下载完整；生成时常驻通知栏：启动时就申请通知权限，通知被关闭时提示去开启；识图默认改用笔记模型（DeepSeek V4.1 Flash）直接看图，失败自动退回硅基流动千问 VL，可在设置里切换"],
             ["1.8.8", "修复导出 PDF 时部分行字与字之间出现大空格（取消两端对齐）；内置思源宋体，导出 PDF 可选宋体或黑体，笔记阅读页也可切换宋体"],
             ["1.8.7", "导出 PDF 重做：用 Paged.js 按 A4 分页，App 直接生成 PDF 文件（不再弹系统打印），页边距、双栏、页码都由 App 控制，图片和公式不跨页；修复导出面板里已选按钮变成空白"],
             ["1.8.6", "去掉阅读页的单栏/双栏切换，阅读恢复单栏；新增导出 PDF：可选单栏或双栏（教材式，每页左右两栏）、字号、是否保留截图、页边距，带页面预览；首页有标题栏；图片、公式、表格不会被切断"],
@@ -3184,7 +3195,7 @@ jobs:
           const _runBg = run;
           run = async function (s) {
             window.__busy = true;
-            try { if (HAS_NATIVE && Native.bgStart) Native.bgStart(s ? "正在提取字幕" : "正在生成笔记"); } catch (e) {}
+            try { if (HAS_NATIVE && Native.bgStart) Native.bgStart(s ? "正在提取字幕" : "正在生成笔记"); if (HAS_NATIVE && Native.notifOk && !Native.notifOk()) { snack("通知权限被关闭，切到后台可能中断，请开启“视频笔记”的通知"); setTimeout(() => { try { Native.openNotifSet(); } catch (e) {} }, 1500); } } catch (e) {}
             try { return await _runBg(s); }
             finally { window.__busy = false; try { if (HAS_NATIVE && Native.bgStop) Native.bgStop(); } catch (e) {} showResume(); }
           };
@@ -4209,10 +4220,11 @@ jobs:
                   "pre{white-space:pre-wrap;word-break:break-all;font-size:.85em;background:#f5f5f5;padding:5pt;border-radius:3pt}" +
                   "table{font-size:.86em;width:100%;border-collapse:collapse}th,td{border:.5pt solid #999;padding:3pt 4pt;vertical-align:top}th{background:#eee}" +
                   "blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}mark{background:#fff3a0}";
-                const cfg = "window.onerror=function(m){try{PdfBridge.fail(String(m))}catch(e){}};" +
+                const cfg0 = "window.onerror=function(m){try{PdfBridge.fail(String(m))}catch(e){}};" +
                   "window.PagedConfig={auto:true," +
                   "before:function(){try{PdfBridge.prog('正在加载图片和公式…')}catch(e){}var a=[].slice.call(document.images);return Promise.all(a.map(function(i){return i.complete?0:new Promise(function(r){i.onload=i.onerror=r;setTimeout(r,8000)})})).then(function(){try{PdfBridge.prog('正在加载字体…')}catch(e){}return document.fonts&&document.fonts.load?Promise.race([document.fonts.load('16px Noto Serif SC',document.body.textContent.slice(0,30000)),new Promise(function(r){setTimeout(r,15000)})]).catch(function(){}):0}).then(function(){try{PdfBridge.prog('正在分页排版…')}catch(e){}})}," +
                   "after:function(f){var n=(f&&f.total)||document.querySelectorAll('.pagedjs_page').length;setTimeout(function(){PdfBridge.done(n)},500)}};";
+                const cfg = cfg0 + ";(function(){var C=window.PagedConfig,b=C.before;C.before=function(){var t=(document.body&&document.body.innerText)||\"宋\";var w=Promise.all([document.fonts.load(\"16px 'Noto Serif SC'\",t),document.fonts.load(\"bold 16px 'Noto Serif SC'\",t)]).then(function(){return document.fonts.ready});var to=new Promise(function(r){setTimeout(r,15000)});return Promise.race([w,to]).catch(function(){}).then(function(){return b&&b.apply(this,arguments)})}})();";
                 const html = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="katex/katex.min.css"><link rel="stylesheet" href="fonts/serif.css"><style>' + css + "</style><script>" + cfg + '<\/script><script src="paged.polyfill.js"><\/script></head><body>' +
                   '<div class="ptl"><b>' + esc2(current.title || "笔记") + "</b><span>" + esc2(sub) + "</span></div>" +
                   '<div class="pbd' + (o.col === "2" ? " c2" : "") + '">' + tmp.innerHTML + "</div></body></html>";
