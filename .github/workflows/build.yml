@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 47
-                  versionName "1.9.0"
+                  versionCode 48
+                  versionName "1.9.1"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -3023,8 +3023,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.9.0";
+          const APP_VER = "1.9.1";
           const CHANGELOG = [
+            ["1.9.1", "导出 PDF 的截图选项新增“只保留正文”：正文里的截图保留，文末“课堂截图”汇总部分不导出"],
             ["1.9.0", "修复公式显示错误（阅读页和导出 PDF）：多行公式块、没包 $$ 的 cases 等环境会显示成红色源码；纯英文单词被当成公式显示成怪斜体"],
             ["1.8.9", "修复宋体不生效：字体路径写错；导出 PDF 时先等宋体加载完再排版（之前来不及加载就用了系统黑体）；构建时检查宋体是否下载完整；生成时常驻通知栏：启动时就申请通知权限，通知被关闭时提示去开启；识图默认改用笔记模型（DeepSeek V4.1 Flash）直接看图，失败自动退回硅基流动千问 VL，可在设置里切换"],
             ["1.8.8", "修复导出 PDF 时部分行字与字之间出现大空格（取消两端对齐）；内置思源宋体，导出 PDF 可选宋体或黑体，笔记阅读页也可切换宋体"],
@@ -4160,7 +4161,7 @@ jobs:
                 '<div class="lb">排版</div><div class="seg" data-k="col"><button class="chip5" data-v="1">单栏</button><button class="chip5" data-v="2">双栏（教材式）</button></div>' +
                 '<div class="lb">字号</div><div class="seg" data-k="fs"><button class="chip5" data-v="s">小</button><button class="chip5" data-v="m">中</button><button class="chip5" data-v="l">大</button></div>' +
                 '<div class="lb">字体</div><div class="seg" data-k="ff"><button class="chip5" data-v="song">宋体</button><button class="chip5" data-v="hei">黑体</button></div>' +
-                '<div class="lb">截图</div><div class="seg" data-k="img"><button class="chip5" data-v="1">保留</button><button class="chip5" data-v="0">不要（更省纸）</button></div>' +
+                '<div class="lb">截图</div><div class="seg" data-k="img"><button class="chip5" data-v="1">全部保留</button><button class="chip5" data-v="2">只保留正文</button><button class="chip5" data-v="0">不要（更省纸）</button></div>' +
                 '<div class="lb">页边距</div><div class="seg" data-k="mg"><button class="chip5" data-v="n">标准</button><button class="chip5" data-v="w">窄</button></div>' +
                 '<div class="mute" style="font-size:13px;line-height:1.6;margin-top:2px">直接生成 PDF 文件，保存到 下载/VideoToNote，不经过系统打印。页边距、分栏、页码都由 App 排好。</div>' +
                 '<div class="acts"><button class="sec" data-a="x">取消</button><button class="big" data-a="go" style="flex:1">导出</button></div></div>';
@@ -4208,6 +4209,7 @@ jobs:
               try {
                 const tmp = document.createElement("div"); tmp.innerHTML = render(curMd());
                 if (o.img === "0") tmp.querySelectorAll("img,figure,.shot").forEach(x => x.remove());
+                if (o.img === "2") { Array.from(tmp.querySelectorAll("h1,h2,h3,h4")).filter(h => /课堂截图/.test(h.textContent)).forEach(h => { const lv = +h.tagName[1]; let n = h.nextElementSibling; while (n && !(/^H[1-4]$/.test(n.tagName) && +n.tagName[1] <= lv) && n.tagName !== "HR") { const x = n; n = n.nextElementSibling; x.remove(); } h.remove(); }); }
                 tmp.querySelectorAll("img").forEach(i => { i.removeAttribute("loading"); });
                 const esc2 = t => String(t).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
                 const sub = (current.tag ? current.tag + " · " : "") + new Date(current.time || Date.now()).toLocaleDateString() + (current.bvid ? " · " + current.bvid : "");
