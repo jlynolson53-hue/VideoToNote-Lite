@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 48
-                  versionName "1.9.1"
+                  versionCode 49
+                  versionName "1.9.2"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -3023,8 +3023,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.9.1";
+          const APP_VER = "1.9.2";
           const CHANGELOG = [
+            ["1.9.2", "阅读页工具栏重排：导出 PDF 改为醒目的主按钮；搜索、目录收成图标；字体与字号归为一组"],
             ["1.9.1", "导出 PDF 的截图选项新增“只保留正文”：正文里的截图保留，文末“课堂截图”汇总部分不导出"],
             ["1.9.0", "修复公式显示错误（阅读页和导出 PDF）：多行公式块、没包 $$ 的 cases 等环境会显示成红色源码；纯英文单词被当成公式显示成怪斜体"],
             ["1.8.9", "修复宋体不生效：字体路径写错；导出 PDF 时先等宋体加载完再排版（之前来不及加载就用了系统黑体）；构建时检查宋体是否下载完整；生成时常驻通知栏：启动时就申请通知权限，通知被关闭时提示去开启；识图默认改用笔记模型（DeepSeek V4.1 Flash）直接看图，失败自动退回硅基流动千问 VL，可在设置里切换"],
@@ -4270,6 +4271,28 @@ jobs:
             b.onclick = () => { localStorage.setItem("vtn_rfont", song() ? "hei" : "song"); apply(); snack(song() ? "阅读字体：宋体" : "阅读字体：黑体"); };
             const s0 = tools.querySelector('[data-a="s"]'); s0 ? s0.before(b) : tools.appendChild(b);
             apply();
+          })();
+          // v1.9.2：阅读页工具栏重排——导出 PDF 为主按钮，其余收成次要图标组
+          (function () {
+            const t = $("readTools"); if (!t) return;
+            const st = document.createElement("style");
+            st.textContent = "#readTools{gap:10px!important;align-items:center}#readTools .grp{display:inline-flex;background:var(--surface-variant,rgba(120,120,128,.12));border-radius:999px;padding:3px}#readTools .grp .chip5{background:transparent!important;border:0!important;box-shadow:none!important;min-width:40px;padding:0 12px;color:var(--on-surface-variant,#555)}#readTools .grp .chip5:active{background:rgba(10,132,255,.15)!important}#readTools .pri{background:#0A84FF!important;color:#fff!important;border:0!important;font-weight:600;padding:0 18px;height:36px!important;box-shadow:0 2px 8px rgba(10,132,255,.35)}#readTools .pri::before{content:'picture_as_pdf';font-family:'Material Symbols Rounded';font-size:20px;margin-right:6px;vertical-align:middle}";
+            document.head.appendChild(st);
+            const bs = Array.from(t.querySelectorAll("button.chip5"));
+            const by = f => bs.find(f);
+            const pdf = by(b => /导出 PDF/.test(b.textContent));
+            const font = by(b => /^(宋体|黑体)$/.test(b.textContent.trim()));
+            const s = t.querySelector('[data-a="s"]'), b = t.querySelector('[data-a="b"]');
+            const find = t.querySelector('[data-a="find"]'), toc = t.querySelector('[data-a="toc"]');
+            const g1 = document.createElement("span"); g1.className = "grp";
+            const g2 = document.createElement("span"); g2.className = "grp";
+            const ico = (el, name, tip) => { if (!el) return; el.innerHTML = '<span class="ic" style="font-size:20px">' + name + "</span>"; el.title = tip; el.setAttribute("aria-label", tip); };
+            ico(find, "search", "搜索"); ico(toc, "toc", "目录");
+            [find, toc].forEach(x => x && g1.appendChild(x));
+            [font, s, b].forEach(x => x && g2.appendChild(x));
+            if (pdf) { pdf.classList.add("pri"); t.prepend(pdf); }
+            const info = $("readInfo");
+            info ? (info.before(g1), info.before(g2)) : (t.appendChild(g1), t.appendChild(g2));
           })();
           iconFallback();
           </script>
