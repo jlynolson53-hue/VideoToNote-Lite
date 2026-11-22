@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 51
-                  versionName "1.9.4"
+                  versionCode 52
+                  versionName "2.0.0"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -94,13 +94,13 @@ jobs:
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
               <application
-                  android:label="视频笔记"
+                  android:label="FrameNote"
                   android:icon="@mipmap/ic_launcher"
                   android:roundIcon="@mipmap/ic_launcher"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar">
                   <activity
                       android:name=".MainActivity"
-                      android:label="视频笔记"
+                      android:label="FrameNote"
                       android:exported="true"
                       android:launchMode="singleTask"
                       android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden">
@@ -1152,7 +1152,7 @@ jobs:
                       open.addCategory(Intent.CATEGORY_LAUNCHER);
                       android.app.PendingIntent pi = android.app.PendingIntent.getActivity(this, 0, open,
                           android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
-                      nb.setSmallIcon(getApplicationInfo().icon).setContentTitle("视频笔记").setContentText(t + "，可以切到后台")
+                      nb.setSmallIcon(getApplicationInfo().icon).setContentTitle("FrameNote").setContentText(t + "，可以切到后台")
                         .setOngoing(true).setContentIntent(pi);
                       if (android.os.Build.VERSION.SDK_INT >= 29)
                           startForeground(1, nb.build(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
@@ -2018,7 +2018,7 @@ jobs:
           <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>视频笔记</title>
+          <title>FrameNote</title>
           <style>
           @font-face{font-family:"Material Symbols Rounded";font-style:normal;font-weight:400;font-display:block;src:url(ms/material-symbols-rounded.woff2) format("woff2")}
           :root{--primary:#0b57d0;--on-primary:#fff;--primary-container:#d3e3fd;--on-primary-container:#041e49;--secondary-container:#c2e7ff;--on-secondary-container:#001d35;
@@ -2283,7 +2283,7 @@ jobs:
           <span id="themeChip" hidden></span><span id="loginChip" hidden></span>
 
           <div class="page on" id="pg-gen"><div class="wrap">
-            <h1 class="hd">视频转笔记</h1>
+            <h1 class="hd">FrameNote</h1>
             <div class="card" id="genCard">
               <label for="input">B站链接或分享文字</label>
               <div class="frow"><textarea id="input" rows="2" placeholder="支持 b23.tv 短链、BV号、完整链接"></textarea>
@@ -2352,7 +2352,7 @@ jobs:
               <label>主题色</label><div class="chips" id="seedChips"></div>
             </div>
             <div class="gt">关于</div>
-            <div class="grp"><div class="li"><span>版本</span><span class="mute" id="verTxt">1.6.2</span></div><div class="mute">视频笔记 · Material 3 界面</div><details id="chgBox" style="margin-top:8px"><summary><b>更新日志</b></summary><div id="chgList" class="mute"></div></details></div>
+            <div class="grp"><div class="li"><span>版本</span><span class="mute" id="verTxt">1.6.2</span></div><div class="mute">FrameNote</div><details id="chgBox" style="margin-top:8px"><summary><b>更新日志</b></summary><div id="chgList" class="mute"></div></details></div>
           </div></div>
 
           <div id="pg-det">
@@ -3667,8 +3667,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "1.9.4";
+          const APP_VER = "2.0.0";
           const CHANGELOG = [
+            ["2.0.0", "应用改名 FrameNote；界面改版：平板 Grok 式文字侧栏，黑白配色只让主按钮用实心黑色，生成页选项折叠成一行摘要，“生成笔记”固定在底部"],
             ["1.9.4", "更换应用图标：黑底白色视频加铅笔"],
             ["1.9.3", "阅读页工具栏收紧：按钮紧挨排列，搜索/目录、字体/字号两组加描边和分隔线"],
             ["1.9.2", "阅读页工具栏重排：导出 PDF 改为醒目的主按钮；搜索、目录收成图标；字体与字号归为一组"],
@@ -3716,7 +3717,7 @@ jobs:
             if (!MAT) return "";
             const L = [];
             let v = APP_VER; try { if (HAS_NATIVE && Native.appVersion) v = Native.appVersion() || v; } catch (e) {}
-            L.push("【视频笔记反馈包】App 版本 " + v);
+            L.push("【FrameNote反馈包】App 版本 " + v);
             L.push("标题：" + MAT.title + "\n来源：https://www.bilibili.com/video/" + MAT.bvid + "?p=" + MAT.p + "\n文字稿：" + (MAT.asr ? "语音识别" : "B站字幕") + "，" + MAT.segs.length + " 段\n截图：" + MAT.frames.length + " 张\n笔记风格：" + MAT.style + "\n时间戳：" + (MAT.ts ? "开" : "关"));
             L.push("===== 我的要求 =====\n" + (MAT.req || "（无）"));
             L.push("===== 各版本修改意见 =====\n" + ((MAT.vers || []).map((x, i) => "第" + (i + 1) + "版：" + (x.note || "")).join("\n") || "（无）"));
@@ -3849,7 +3850,7 @@ jobs:
           const _runBg = run;
           run = async function (s) {
             window.__busy = true;
-            try { if (HAS_NATIVE && Native.bgStart) Native.bgStart(s ? "正在提取字幕" : "正在生成笔记"); if (HAS_NATIVE && Native.notifOk && !Native.notifOk()) { snack("通知权限被关闭，切到后台可能中断，请开启“视频笔记”的通知"); setTimeout(() => { try { Native.openNotifSet(); } catch (e) {} }, 1500); } } catch (e) {}
+            try { if (HAS_NATIVE && Native.bgStart) Native.bgStart(s ? "正在提取字幕" : "正在生成笔记"); if (HAS_NATIVE && Native.notifOk && !Native.notifOk()) { snack("通知权限被关闭，切到后台可能中断，请开启“FrameNote”的通知"); setTimeout(() => { try { Native.openNotifSet(); } catch (e) {} }, 1500); } } catch (e) {}
             try { return await _runBg(s); }
             finally { window.__busy = false; try { if (HAS_NATIVE && Native.bgStop) Native.bgStop(); } catch (e) {} showResume(); }
           };
@@ -4341,7 +4342,7 @@ jobs:
                 });
               }
               const d = new Date(), p2 = n => String(n).padStart(2, "0");
-              const nm = "视频笔记备份_" + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + "_" + p2(d.getHours()) + p2(d.getMinutes()) + (mode === "full" ? "_完整" : "_正文") + ".json";
+              const nm = "FrameNote备份_" + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + "_" + p2(d.getHours()) + p2(d.getMinutes()) + (mode === "full" ? "_完整" : "_正文") + ".json";
               try {
                 const txt = JSON.stringify(data);
                 const r = HAS_NATIVE && Native.saveFile ? Native.saveFile(nm, txt) : "";
@@ -4357,7 +4358,7 @@ jobs:
               const rd = new FileReader();
               rd.onload = async () => {
                 let d; try { d = JSON.parse(rd.result); } catch (x) { snack("不是有效的备份文件"); return; }
-                if (!d || d.app !== "vtn" || !d.ls) { snack("不是视频笔记的备份文件"); return; }
+                if (!d || d.app !== "vtn" || !d.ls) { snack("不是 FrameNote 的备份文件"); return; }
                 let cur = loadHist(), inc = []; try { inc = JSON.parse(d.ls.vtn_hist || "[]"); } catch (x) {}
                 const seen = new Set(cur.map(x => x.time)), add = inc.filter(x => !seen.has(x.time));
                 const imgN = Object.keys(d.img || {}).length;
@@ -4531,7 +4532,7 @@ jobs:
                 const h = loadHist().filter(x => picked.has(String(x.time)));
                 const md = h.map(x => "# " + x.title + "\n\n" + String(x.md || "").replace(/^#\s[^\n]*\n/, "")).join("\n\n---\n\n");
                 const d = new Date(), p2 = n => String(n).padStart(2, "0");
-                const nm = "视频笔记合集_" + h.length + "篇_" + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + ".md";
+                const nm = "FrameNote合集_" + h.length + "篇_" + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + ".md";
                 try { const r = Native.saveFile(nm, md); if (String(r).startsWith("err")) throw new Error(r); snack("已导出到 下载/VideoToNote/" + nm); setSel(false); } catch (x) { snack("导出失败：" + x.message); }
               }
             };
@@ -4940,6 +4941,55 @@ jobs:
             const info = $("readInfo");
             info ? (info.before(g1), info.before(g2)) : (t.appendChild(g1), t.appendChild(g2));
           })();
+          // v2.0.0：FrameNote 改版——Grok 式文字侧栏、黑白主色、生成页底部操作栏、选项折叠
+          (function () {
+            const st = document.createElement("style");
+            st.textContent =
+              ":root{--primary:#111!important;--on-primary:#fff!important;--secondary-container:#e9e9ec!important;--on-secondary-container:#111!important;--fn-line:rgba(0,0,0,.12)}" +
+              "@media (prefers-color-scheme:dark){:root{--primary:#f2f2f2!important;--on-primary:#111!important;--secondary-container:#2c2c2e!important;--on-secondary-container:#fff!important;--fn-line:rgba(255,255,255,.16)}}" +
+              "html.dark{--primary:#f2f2f2!important;--on-primary:#111!important;--secondary-container:#2c2c2e!important;--on-secondary-container:#fff!important;--fn-line:rgba(255,255,255,.16)}" +
+              ".chip5{background:transparent!important;border:1px solid var(--fn-line)!important;color:var(--on-surface)!important;box-shadow:none!important}" +
+              ".chip5.on{background:var(--secondary-container)!important;border-color:var(--on-surface)!important;color:var(--on-surface)!important;font-weight:600}" +
+              "#goBtn,.big,#readTools .pri,.pdfS .seg .chip5.on{background:var(--primary)!important;color:var(--on-primary)!important;border-color:var(--primary)!important;box-shadow:0 4px 14px rgba(0,0,0,.18)!important}" +
+              "#readTools .pri::before{color:inherit}" +
+              ".fn-brand{display:none}" +
+              "@media (min-width:841px){body{padding-left:256px!important}" +
+              ".nav{width:240px!important;padding:20px 16px!important;gap:8px!important;align-items:stretch!important}" +
+              ".fn-brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;padding:4px 8px 18px;color:var(--on-surface)}" +
+              ".fn-brand i{width:34px;height:34px;border-radius:9px;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:20px}" +
+              ".nav button{flex-direction:row!important;justify-content:flex-start!important;gap:14px!important;padding:14px 16px!important;border-radius:16px!important;font-size:17px!important;font-weight:600!important;color:var(--on-surface)!important;background:var(--surface,#fff)!important;max-width:none!important;width:100%}" +
+              ".nav button .pill{width:auto!important;height:auto!important;background:none!important}" +
+              ".nav button.on{background:var(--primary)!important;color:var(--on-primary)!important}" +
+              ".wrap{max-width:960px!important;margin:0 auto!important}}" +
+              "#fnOpt{border:1px solid var(--fn-line);border-radius:16px;padding:0 14px;margin:12px 0}" +
+              "#fnOpt>summary{list-style:none;display:flex;align-items:center;gap:8px;padding:12px 0;cursor:pointer;font-size:15px}" +
+              "#fnOpt>summary::-webkit-details-marker{display:none}" +
+              "#fnOpt>summary b{font-weight:600}#fnOpt>summary span{color:var(--on-surface-variant);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
+              "#fnBar{position:sticky;bottom:0;z-index:20;display:flex;align-items:center;gap:10px;padding:12px 0 calc(12px + env(safe-area-inset-bottom));margin-top:8px;background:linear-gradient(to top,var(--surface,#fff) 75%,transparent)}" +
+              "#fnBar #goBtn{flex:1;margin:0!important;height:52px;border-radius:26px!important;font-size:17px}#fnBar #subOnly{margin:0!important;white-space:nowrap}";
+            document.head.appendChild(st);
+            const nav = document.querySelector(".nav");
+            if (nav && !nav.querySelector(".fn-brand")) { const b = document.createElement("div"); b.className = "fn-brand"; b.innerHTML = "<i>▶</i>FrameNote"; nav.prepend(b); }
+            const card = $("genCard"), go = $("goBtn"), sub = $("subOnly"), row = $("input") && $("input").closest(".frow");
+            if (card && go && row) {
+              const det = document.createElement("details"); det.id = "fnOpt";
+              det.innerHTML = '<summary><i class="ic" style="font-size:20px">tune</i><b>生成选项</b><span id="fnSum"></span><i class="ic">expand_more</i></summary>';
+              const box = document.createElement("div"); det.appendChild(box);
+              let n = row.nextSibling; const mv = [];
+              while (n && n !== go) { mv.push(n); n = n.nextSibling; }
+              mv.forEach(x => box.appendChild(x));
+              row.after(det);
+              const bar = document.createElement("div"); bar.id = "fnBar"; det.after(bar); bar.appendChild(go); if (sub) bar.appendChild(sub);
+              const sum = () => {
+                const on = Array.from(box.querySelectorAll(".chip5.on")).map(c => c.textContent.trim()).filter(t => t && t !== "不分类");
+                const p = $("pnum") && $("pnum").value ? "P" + $("pnum").value : "";
+                const rq = $("reqEn") && $("reqEn").checked ? "我的要求" : "";
+                $("fnSum").textContent = [p].concat(on, [rq]).filter(Boolean).join(" · ") || "默认";
+              };
+              box.addEventListener("click", () => setTimeout(sum, 50)); box.addEventListener("change", sum); box.addEventListener("input", sum);
+              setTimeout(sum, 300);
+            }
+          })();
           iconFallback();
           </script>
           </body>
@@ -4984,5 +5034,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: 视频笔记精简版 v${{ steps.ver.outputs.v }}（第${{ github.run_number }}版）
+          name: FrameNote v${{ steps.ver.outputs.v }}（第${{ github.run_number }}版）
           files: VideoToNote-Lite.apk
