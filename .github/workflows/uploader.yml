@@ -70,6 +70,10 @@ jobs:
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
               <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+              <queries>
+                  <package android:name="dev.imranr.obtainium" />
+                  <package android:name="dev.imranr.obtainium.fdroid" />
+              </queries>
               <application android:label="build上传助手" android:icon="@android:drawable/stat_sys_upload"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar">
                   <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask"
@@ -226,6 +230,29 @@ jobs:
                       try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) {}
                   }
           
+                  String obPkg() {
+                      String[] ps = {"dev.imranr.obtainium", "dev.imranr.obtainium.fdroid"};
+                      for (String p : ps) {
+                          if (getPackageManager().getLaunchIntentForPackage(p) != null) return p;
+                      }
+                      return null;
+                  }
+          
+                  @JavascriptInterface
+                  public boolean hasObtainium() { return obPkg() != null; }
+          
+                  @JavascriptInterface
+                  public boolean openObtainium() {
+                      String p = obPkg();
+                      if (p == null) return false;
+                      try {
+                          Intent i = getPackageManager().getLaunchIntentForPackage(p);
+                          i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                          startActivity(i);
+                          return true;
+                      } catch (Exception e) { return false; }
+                  }
+          
                   @JavascriptInterface
                   public void toast(final String m) {
                       runOnUiThread(new Runnable() { public void run() {
@@ -252,8 +279,10 @@ jobs:
                           } else {
                               nb = new Notification.Builder(MainActivity.this);
                           }
-                          PendingIntent pi = PendingIntent.getActivity(MainActivity.this, 0,
-                                  new Intent(MainActivity.this, MainActivity.class),
+                          Intent target = new Intent(MainActivity.this, MainActivity.class);
+                          String ob = obPkg();
+                          if (ob != null && title.contains("成功")) target = getPackageManager().getLaunchIntentForPackage(ob);
+                          PendingIntent pi = PendingIntent.getActivity(MainActivity.this, 0, target,
                                   PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
                           nb.setSmallIcon(android.R.drawable.stat_sys_upload_done).setContentTitle(title).setContentText(text)
                                   .setAutoCancel(true).setContentIntent(pi);
@@ -292,7 +321,7 @@ jobs:
           <div class="c"><details><summary>选项</summary><label>仓库</label><input id="repo" type="text">
           <div class="row"><div><label>分支</label><input id="br" type="text"></div><div><label>最长等待（分钟）</label><input id="to" type="number" value="25"></div></div>
           <label>仓库内路径</label><input id="tg" type="text">
-          <label class="chk"><input id="dry" type="checkbox">试运行（不提交）</label><label class="chk"><input id="nw" type="checkbox">上传后不跟踪编译</label>
+          <label class="chk"><input id="dry" type="checkbox">试运行（不提交）</label><label class="chk"><input id="nw" type="checkbox">上传后不跟踪编译</label><label class="chk"><input id="ob" type="checkbox" checked>编译成功后自动打开 Obtainium</label>
           <button style="margin-top:10px" onclick="saveOpt()">保存选项</button></details></div></div>
           <script>
           const $=i=>document.getElementById(i),API="https://api.github.com",LS=localStorage;
@@ -300,8 +329,8 @@ jobs:
           let busy=false,files=[];
           function showTok(){const t=LS.getItem("vtn_tok");$("ts").textContent=t?"已就绪":"未设置";$("ts").className="b "+(t?"ok":"no")}
           function saveTok(){const t=$("tok").value.trim();if(!t)return App.toast("先粘贴 token");LS.setItem("vtn_tok",t);$("tok").value="";showTok();App.toast("已保存")}
-          function loadOpt(){const o=JSON.parse(LS.getItem("vtn_opt")||"{}");for(const k in DEF)$(k).value=o[k]||DEF[k]}
-          function saveOpt(){const o={};for(const k in DEF)o[k]=$(k).value.trim();LS.setItem("vtn_opt",JSON.stringify(o));App.toast("已保存")}
+          function loadOpt(){const o=JSON.parse(LS.getItem("vtn_opt")||"{}");for(const k in DEF)$(k).value=o[k]||DEF[k];$("ob").checked=o.ob!==false}
+          function saveOpt(){const o={};for(const k in DEF)o[k]=$(k).value.trim();o.ob=$("ob").checked;LS.setItem("vtn_opt",JSON.stringify(o));App.toast("已保存")}
           function say(m,c){const d=document.createElement("div");d.className=c||"";d.textContent="["+new Date().toTimeString().slice(0,8)+"] "+m;$("log").appendChild(d);d.scrollIntoView({block:"nearest"})}
           function link(t,u){const b=document.createElement("button");b.className="lk";b.textContent=t;b.onclick=()=>App.openUrl(u);$("links").appendChild(b)}
           function st(s){$("st").textContent=s}
@@ -367,7 +396,12 @@ jobs:
             if(rn.status=="queued")say("排队中...","d");
             else if(rn.status=="in_progress"){say("编译中...","d");link("本次编译日志",rn.html_url)}
             else if(rn.status=="completed"){
-             if(rn.conclusion=="success"){say("编译成功！用时 "+tm,"g");link("下载新 APK","https://github.com/"+repo+"/releases/latest");st("完成");App.notify("编译成功","点开下载新 APK");return}
+             if(rn.conclusion=="success"){say("编译成功！用时 "+tm,"g");const hasOb=App.hasObtainium();
+              if(hasOb){const b=document.createElement("button");b.className="lk";b.textContent="打开 Obtainium 更新";b.onclick=()=>App.openObtainium();$("links").appendChild(b)}
+              link("下载新 APK","https://github.com/"+repo+"/releases/latest");st("完成");
+              App.notify("编译成功",hasOb?"点开进入 Obtainium 更新":"点开下载新 APK");
+              if(hasOb&&$("ob").checked){say("3 秒后打开 Obtainium，进去后下拉刷新检查更新","d");await sleep(3000);App.openObtainium()}
+              else if(!hasOb)say("没检测到 Obtainium，已改为提供下载链接","y");return}
              say("编译失败（"+rn.conclusion+"）","r");link("失败日志",rn.html_url);st("编译失败");App.notify("编译失败","打开查看日志");return}}
            say("还没等到编译结束，可点 Actions 页面看进度","y");st("等待超时")}finally{App.keepScreen(false)}}
           loadOpt();showTok();loadFiles(false);
@@ -402,4 +436,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_NO: ${{ github.run_number }}
         run: |
-          gh release create "v1.0.$RUN_NO" BuildUploader.apk --title "build上传助手 1.0.$RUN_NO" --notes "自动构建"
+          gh release create "uploader-1.0.$RUN_NO" BuildUploader.apk --prerelease --title "build上传助手 1.0.$RUN_NO" --notes "build上传助手自动构建（预发布，不影响视频笔记的 latest）"
