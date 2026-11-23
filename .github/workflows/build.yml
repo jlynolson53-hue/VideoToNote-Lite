@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 59
-                  versionName "2.0.7"
+                  versionCode 60
+                  versionName "2.0.8"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -1729,7 +1729,7 @@ jobs:
                               pw.setAlpha(0f);
                               pw.setTranslationX(-6000f);
                               android.view.ViewGroup root = (android.view.ViewGroup) getWindow().getDecorView();
-                              root.addView(pw, new android.widget.FrameLayout.LayoutParams(1240, 1754));
+                              root.addView(pw, new android.widget.FrameLayout.LayoutParams(794, 1123));
                               pw.addJavascriptInterface(new PdfJs(id, name, pw), "PdfBridge");
                               pw.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null);
                           } catch (Throwable e) {
@@ -3477,7 +3477,7 @@ jobs:
             ".tbw table{border-collapse:collapse;width:100%;font-size:14px}.tbw th,.tbw td{border:1px solid #bbb;padding:6px 8px;text-align:left;vertical-align:top}.tbw th{background:#eef2fb}" +
             ".mathd{margin:10px 0}.katex{font-size:1.05em}h1,h2,h3{page-break-after:avoid;break-after:avoid}";
           function pdfHtml(md) {
-            return '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="katex/katex.min.css"><style>' + PCSS +
+            return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=794,initial-scale=1"><link rel="stylesheet" href="katex/katex.min.css"><style>' + PCSS +
               '</style></head><body>' + render(md) + '</body></html>';
           }
           function curMd() { if (current) current.md = $("source").value; return current ? current.md : ""; }
@@ -3680,8 +3680,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.0.7";
+          const APP_VER = "2.0.8";
           const CHANGELOG = [
+            ["2.0.8", "双栏 PDF 满版根治：隐藏排版窗口宽度改为与 A4 一致（794px，原 1240px 导致整页缩到约 64%）；每页单独裁剪超宽内容，不再影响其他页；分页前缩放长公式保留"],
             ["2.0.7", "彻底修复双栏 PDF 只占纸张左上 2/3：超宽公式/表格在分页前按栏宽等比缩小（真正缩小占位，不再把页面撑宽）"],
             ["2.0.6", "修复双栏 PDF 只导出第一页；超长公式改为整体等比缩小到栏宽，不再缺右半部分"],
             ["2.0.5", "鼠标悬停时按钮、列表项变灰，指向更直观；修复设置里“关于”页面空白；修复双栏 PDF 内容缩在纸张左上约 2/3 的问题（超宽公式/表格/图片不再把整页撑宽）"],
@@ -4883,7 +4884,7 @@ jobs:
                 const sub = (current.tag ? current.tag + " · " : "") + new Date(current.time || Date.now()).toLocaleDateString() + (current.bvid ? " · " + current.bvid : "");
                 const FFS = "'Noto Serif SC','Noto Serif CJK SC','Source Han Serif SC','Songti SC','SimSun',serif", FFH = "'Noto Sans CJK SC','Source Han Sans SC','PingFang SC',sans-serif";
                 const css = "@page{size:A4;margin:" + (MG[o.mg] || MG.n) + ";@bottom-center{content:counter(page) \" / \" counter(pages);font-size:8.5pt;color:#888;font-family:sans-serif}}" +
-                  "html,body{background:#fff;margin:0;}.pagedjs_area,.pagedjs_page_content,.pbd,.pbd *{max-width:100%!important;box-sizing:border-box;min-width:0!important}.pbd{overflow-wrap:anywhere}.katex-display{overflow:visible!important}.katex-display>.katex{display:inline-block;white-space:nowrap}.c2 .katex-display{font-size:.8em!important}a{word-break:break-all}"+"body{color:#222;font-size:" + (FS[o.fs] || FS.m) + ";line-height:1.62;font-family:" + (o.ff === "hei" ? FFH : FFS) + ";text-align:start}" +
+                  "html,body{background:#fff;margin:0}@media screen{html,body{width:210mm!important}}.pagedjs_pages{width:210mm!important}.pagedjs_sheet,.pagedjs_page{overflow:hidden!important}.pbd .katex{max-width:100%}.pagedjs_area,.pagedjs_page_content,.pbd,.pbd *{max-width:100%!important;box-sizing:border-box;min-width:0!important}.pbd{overflow-wrap:anywhere}.katex-display{overflow:visible!important}.katex-display>.katex{display:inline-block;white-space:nowrap}.c2 .katex-display{font-size:.8em!important}a{word-break:break-all}"+"body{color:#222;font-size:" + (FS[o.fs] || FS.m) + ";line-height:1.62;font-family:" + (o.ff === "hei" ? FFH : FFS) + ";text-align:start}" +
                   "*{text-align-last:auto!important;letter-spacing:normal!important;word-spacing:normal!important}p,li,td,th,h1,h2,h3,div{text-align:start!important}" +
                   ".ptl{border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}.ptl b{display:block;font-size:1.6em;line-height:1.3;font-family:sans-serif}.ptl span{font-size:.8em;color:#666}" +
                   ".pbd.c2{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb;column-fill:auto}" +
@@ -4899,7 +4900,7 @@ jobs:
                 const cfg0 = "window.onerror=function(m){try{PdfBridge.fail(String(m))}catch(e){}};" +
                   "window.PagedConfig={auto:true," +
                   "before:function(){try{PdfBridge.prog('正在加载图片和公式…')}catch(e){}var a=[].slice.call(document.images);return Promise.all(a.map(function(i){return i.complete?0:new Promise(function(r){i.onload=i.onerror=r;setTimeout(r,8000)})})).then(function(){try{PdfBridge.prog('正在加载字体…')}catch(e){}return document.fonts&&document.fonts.load?Promise.race([document.fonts.load('16px Noto Serif SC',document.body.textContent.slice(0,30000)),new Promise(function(r){setTimeout(r,15000)})]).catch(function(){}):0}).then(function(){try{PdfBridge.prog('正在分页排版…')}catch(e){}})}," +
-                  "after:function(f){var n=(f&&f.total)||document.querySelectorAll('.pagedjs_page').length;setTimeout(function(){PdfBridge.done(n)},500)}};";
+                  "after:function(f){try{var bad=[];var pg=document.querySelector('.pagedjs_page');var R=pg?pg.getBoundingClientRect().right+1:1e9;[].slice.call(document.querySelectorAll('.pagedjs_page_content *')).forEach(function(e){if(e.getBoundingClientRect().right>R&&bad.length<3)bad.push(e.tagName)});if(bad.length)PdfBridge.prog('有超宽元素已裁剪：'+bad.join(','))}catch(e){}var n=(f&&f.total)||document.querySelectorAll('.pagedjs_page').length;setTimeout(function(){PdfBridge.done(n)},500)}};";
                 const cfg = cfg0 + ";(function(){var C=window.PagedConfig,b=C.before;C.before=function(){try{var c2=!!document.querySelector('.pbd.c2');var pr=document.createElement('div');pr.style.cssText='position:absolute;visibility:hidden;width:'+(c2?'82mm':'172mm');document.body.appendChild(pr);var W=pr.getBoundingClientRect().width;pr.remove();[].slice.call(document.querySelectorAll('.pbd .katex-display>.katex,.pbd table,.pbd pre')).forEach(function(k){k.style.display=k.tagName=='TABLE'?'table':(k.tagName=='PRE'?'block':'inline-block');var w=k.scrollWidth;if(W&&w>W){k.style.zoom=(W/w*0.98).toFixed(3)}});[].slice.call(document.querySelectorAll('.pbd img')).forEach(function(i){i.style.maxWidth=W+'px'})}catch(e){};var t=(document.body&&document.body.innerText)||\"宋\";var w=Promise.all([document.fonts.load(\"16px 'Noto Serif SC'\",t),document.fonts.load(\"bold 16px 'Noto Serif SC'\",t)]).then(function(){return document.fonts.ready});var to=new Promise(function(r){setTimeout(r,15000)});return Promise.race([w,to]).catch(function(){}).then(function(){return b&&b.apply(this,arguments)})}})();";
                 const html = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="katex/katex.min.css"><link rel="stylesheet" href="fonts/serif.css"><style>' + css + "</style><script>" + cfg + '<\/script><script src="paged.polyfill.js"><\/script></head><body>' +
                   '<div class="ptl"><b>' + esc2(current.title || "笔记") + "</b><span>" + esc2(sub) + "</span></div>" +
