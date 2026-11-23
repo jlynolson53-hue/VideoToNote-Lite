@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 60
-                  versionName "2.0.8"
+                  versionCode 61
+                  versionName "2.0.9"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -3680,8 +3680,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.0.8";
+          const APP_VER = "2.0.9";
           const CHANGELOG = [
+            ["2.0.9", "双栏长公式更清楚：放进一栏要缩到 80% 以下的公式/表格改为横跨两栏显示，基本不缩小"],
             ["2.0.8", "双栏 PDF 满版根治：隐藏排版窗口宽度改为与 A4 一致（794px，原 1240px 导致整页缩到约 64%）；每页单独裁剪超宽内容，不再影响其他页；分页前缩放长公式保留"],
             ["2.0.7", "彻底修复双栏 PDF 只占纸张左上 2/3：超宽公式/表格在分页前按栏宽等比缩小（真正缩小占位，不再把页面撑宽）"],
             ["2.0.6", "修复双栏 PDF 只导出第一页；超长公式改为整体等比缩小到栏宽，不再缺右半部分"],
@@ -4901,7 +4902,7 @@ jobs:
                   "window.PagedConfig={auto:true," +
                   "before:function(){try{PdfBridge.prog('正在加载图片和公式…')}catch(e){}var a=[].slice.call(document.images);return Promise.all(a.map(function(i){return i.complete?0:new Promise(function(r){i.onload=i.onerror=r;setTimeout(r,8000)})})).then(function(){try{PdfBridge.prog('正在加载字体…')}catch(e){}return document.fonts&&document.fonts.load?Promise.race([document.fonts.load('16px Noto Serif SC',document.body.textContent.slice(0,30000)),new Promise(function(r){setTimeout(r,15000)})]).catch(function(){}):0}).then(function(){try{PdfBridge.prog('正在分页排版…')}catch(e){}})}," +
                   "after:function(f){try{var bad=[];var pg=document.querySelector('.pagedjs_page');var R=pg?pg.getBoundingClientRect().right+1:1e9;[].slice.call(document.querySelectorAll('.pagedjs_page_content *')).forEach(function(e){if(e.getBoundingClientRect().right>R&&bad.length<3)bad.push(e.tagName)});if(bad.length)PdfBridge.prog('有超宽元素已裁剪：'+bad.join(','))}catch(e){}var n=(f&&f.total)||document.querySelectorAll('.pagedjs_page').length;setTimeout(function(){PdfBridge.done(n)},500)}};";
-                const cfg = cfg0 + ";(function(){var C=window.PagedConfig,b=C.before;C.before=function(){try{var c2=!!document.querySelector('.pbd.c2');var pr=document.createElement('div');pr.style.cssText='position:absolute;visibility:hidden;width:'+(c2?'82mm':'172mm');document.body.appendChild(pr);var W=pr.getBoundingClientRect().width;pr.remove();[].slice.call(document.querySelectorAll('.pbd .katex-display>.katex,.pbd table,.pbd pre')).forEach(function(k){k.style.display=k.tagName=='TABLE'?'table':(k.tagName=='PRE'?'block':'inline-block');var w=k.scrollWidth;if(W&&w>W){k.style.zoom=(W/w*0.98).toFixed(3)}});[].slice.call(document.querySelectorAll('.pbd img')).forEach(function(i){i.style.maxWidth=W+'px'})}catch(e){};var t=(document.body&&document.body.innerText)||\"宋\";var w=Promise.all([document.fonts.load(\"16px 'Noto Serif SC'\",t),document.fonts.load(\"bold 16px 'Noto Serif SC'\",t)]).then(function(){return document.fonts.ready});var to=new Promise(function(r){setTimeout(r,15000)});return Promise.race([w,to]).catch(function(){}).then(function(){return b&&b.apply(this,arguments)})}})();";
+                const cfg = cfg0 + ";(function(){var C=window.PagedConfig,b=C.before;C.before=function(){try{var c2=!!document.querySelector('.pbd.c2');var pr=document.createElement('div');pr.style.cssText='position:absolute;visibility:hidden;width:'+(c2?'82mm':'172mm');document.body.appendChild(pr);var W=pr.getBoundingClientRect().width;pr.remove();[].slice.call(document.querySelectorAll('.pbd .katex-display>.katex,.pbd table,.pbd pre')).forEach(function(k){k.style.display=k.tagName=='TABLE'?'table':(k.tagName=='PRE'?'block':'inline-block');var w=k.scrollWidth;if(W&&w>W){var r=W/w;var box=k.tagName=='TABLE'||k.tagName=='PRE'?k:k.parentElement;if(c2&&r<0.8){var Ws=W*172/82;box.style.columnSpan='all';box.style.webkitColumnSpan='all';box.style.margin='6pt 0';box.style.textAlign='center';if(w>Ws)k.style.zoom=(Ws/w*0.98).toFixed(3)}else{k.style.zoom=(r*0.98).toFixed(3)}}});[].slice.call(document.querySelectorAll('.pbd img')).forEach(function(i){i.style.maxWidth=W+'px'})}catch(e){};var t=(document.body&&document.body.innerText)||\"宋\";var w=Promise.all([document.fonts.load(\"16px 'Noto Serif SC'\",t),document.fonts.load(\"bold 16px 'Noto Serif SC'\",t)]).then(function(){return document.fonts.ready});var to=new Promise(function(r){setTimeout(r,15000)});return Promise.race([w,to]).catch(function(){}).then(function(){return b&&b.apply(this,arguments)})}})();";
                 const html = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="katex/katex.min.css"><link rel="stylesheet" href="fonts/serif.css"><style>' + css + "</style><script>" + cfg + '<\/script><script src="paged.polyfill.js"><\/script></head><body>' +
                   '<div class="ptl"><b>' + esc2(current.title || "笔记") + "</b><span>" + esc2(sub) + "</span></div>" +
                   '<div class="pbd' + (o.col === "2" ? " c2" : "") + '">' + tmp.innerHTML + "</div></body></html>";
