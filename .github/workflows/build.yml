@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 55
-                  versionName "2.0.3"
+                  versionCode 56
+                  versionName "2.0.4"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -1604,6 +1604,18 @@ jobs:
                   }
 
                   @JavascriptInterface
+                  public void openLast() {
+                      runOnUiThread(() -> {
+                          try {
+                              String p = System.getProperty("vtn.last"); if (p == null) return;
+                              Intent i = new Intent(Intent.ACTION_VIEW); i.setDataAndType(Uri.parse(p), "application/pdf");
+                              i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                              startActivity(Intent.createChooser(i, "打开 PDF"));
+                          } catch (Exception ignored) { }
+                      });
+                  }
+
+                  @JavascriptInterface
                   public void openUrl(String url) {
                       runOnUiThread(() -> {
                           try {
@@ -1734,6 +1746,7 @@ jobs:
                           v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
                           v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/VideoToNote");
                           Uri u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                          try { if (u != null) System.setProperty("vtn.last", u.toString()); } catch (Exception ignored) { }
                           OutputStream o = getContentResolver().openOutputStream(u);
                           o.write(data); o.close();
                           return "已保存到：下载/VideoToNote/" + name;
@@ -3667,8 +3680,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.0.3";
+          const APP_VER = "2.0.4";
           const CHANGELOG = [
+            ["2.0.4", "导出完成弹窗加“打开文件”；双栏 PDF 表格不再超出纸边（固定列宽、自动换行、略缩小字号）；设置列表改为直的细分隔线；生成进度去掉闪烁方框，当前步骤改为黑色呼吸圈"],
             ["2.0.3", "侧栏选中项图标改为白色不再消失；设置页改为 Grok 式列表，点进去才显示具体设置，取消双栏；去掉全部蓝色和蓝色发光，统一黑白"],
             ["2.0.2", "真正修复“生成笔记”被挤成小圆；设置页平板双栏（按分组排列）；去掉生成选项重复的箭头和侧栏图标后的灰色圆底"],
             ["2.0.1", "所属合集默认折叠，点标题展开；修复底部“生成笔记”按钮被挤成小圆只剩“生”字；设置页平板双栏；去掉点击时的蓝色框；新增按压回弹、卡片依次浮现、展开收起等动效"],
@@ -4877,7 +4891,7 @@ jobs:
                   "img{max-width:100%;height:auto;border-radius:3pt;display:block;margin:4pt auto}.shot{margin:5pt 0}.shot figcaption{font-size:.8em;color:#777;text-align:center}" +
                   ".katex-display{overflow:hidden;margin:5pt 0}.c2 .katex-display{font-size:.88em}" +
                   "pre{white-space:pre-wrap;word-break:break-all;font-size:.85em;background:#f5f5f5;padding:5pt;border-radius:3pt}" +
-                  "table{font-size:.86em;width:100%;border-collapse:collapse}th,td{border:.5pt solid #999;padding:3pt 4pt;vertical-align:top}th{background:#eee}" +
+                  "table{font-size:.86em;width:100%;max-width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:.5pt solid #999;padding:3pt 4pt;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}.c2 table{font-size:.76em}.c2 th,.c2 td{padding:2pt 3pt}.c2 table .katex{font-size:.9em}"+"th{background:#eee}" +
                   "blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}mark{background:#fff3a0}";
                 const cfg0 = "window.onerror=function(m){try{PdfBridge.fail(String(m))}catch(e){}};" +
                   "window.PagedConfig={auto:true," +
@@ -4894,7 +4908,7 @@ jobs:
                   new Promise((_, rej) => setTimeout(() => rej(new Error("超过 150 秒没有完成")), 150000))
                 ]);
                 window.__nativeProg = old;
-                await window.__askOr("PDF 已导出", "好的", (r.pages ? "共 " + r.pages + " 页。\n" : "") + (r.msg || "") + "\n可以在“文件管理 → 下载 → VideoToNote”里找到。", false, "关闭");
+                if (await window.__askOr("PDF 已导出", "打开文件", (r.pages ? "共 " + r.pages + " 页。\n" : "") + (r.msg || "") + "\n也可以在“文件管理 → 下载 → VideoToNote”里找到。", false, "好的")) { try { Native.openLast(); } catch (e) {} }
               } catch (e) {
                 window.__nativeProg = old;
                 const ok = await window.__askOr("导出没成功", "改用系统打印", "停在：" + lastStep + "\n原因：" + e.message + "\n\n可以先用系统打印（在打印界面选“另存为 PDF”）。请把这个提示截图发给我。");
@@ -5088,6 +5102,18 @@ jobs:
             });
             document.querySelectorAll('.nav button[data-p="set"]').forEach(n => n.addEventListener("click", close));
             window.addEventListener("popstate", () => { if (pg.classList.contains("fnSub")) close(); });
+          })();
+          // v2.0.4：设置列表直线分隔、进度步骤去掉方框、细节
+          (function () {
+            const st = document.createElement("style");
+            st.textContent =
+              "#fnSetList{border-radius:20px;overflow:hidden}#fnSetList button{border-bottom:0!important;position:relative;border-radius:0!important}" +
+              "#fnSetList button+button::before{content:'';position:absolute;top:0;left:60px;right:0;height:1px;background:var(--fn-line);transform:scaleY(.6)}" +
+              ".pvS,.pvS *{outline:none!important}.pvS{box-shadow:none!important;border:0!important;background:transparent!important}.pvS::after{display:none!important}" +
+              ".pvS.cur i{box-shadow:0 0 0 2px var(--on-surface)!important;color:var(--on-surface)!important;animation:fnPulse 1.6s ease-in-out infinite!important}" +
+              "@keyframes fnPulse{50%{box-shadow:0 0 0 5px rgba(0,0,0,.08)}}" +
+              ".dlg button,.modal button,[class*=ask] button{outline:none!important}";
+            document.head.appendChild(st);
           })();
           iconFallback();
           </script>
