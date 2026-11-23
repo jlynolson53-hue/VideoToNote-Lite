@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 56
-                  versionName "2.0.4"
+                  versionCode 57
+                  versionName "2.0.5"
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -3680,8 +3680,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.0.4";
+          const APP_VER = "2.0.5";
           const CHANGELOG = [
+            ["2.0.5", "鼠标悬停时按钮、列表项变灰，指向更直观；修复设置里“关于”页面空白；修复双栏 PDF 内容缩在纸张左上约 2/3 的问题（超宽公式/表格/图片不再把整页撑宽）"],
             ["2.0.4", "导出完成弹窗加“打开文件”；双栏 PDF 表格不再超出纸边（固定列宽、自动换行、略缩小字号）；设置列表改为直的细分隔线；生成进度去掉闪烁方框，当前步骤改为黑色呼吸圈"],
             ["2.0.3", "侧栏选中项图标改为白色不再消失；设置页改为 Grok 式列表，点进去才显示具体设置，取消双栏；去掉全部蓝色和蓝色发光，统一黑白"],
             ["2.0.2", "真正修复“生成笔记”被挤成小圆；设置页平板双栏（按分组排列）；去掉生成选项重复的箭头和侧栏图标后的灰色圆底"],
@@ -4880,7 +4881,7 @@ jobs:
                 const sub = (current.tag ? current.tag + " · " : "") + new Date(current.time || Date.now()).toLocaleDateString() + (current.bvid ? " · " + current.bvid : "");
                 const FFS = "'Noto Serif SC','Noto Serif CJK SC','Source Han Serif SC','Songti SC','SimSun',serif", FFH = "'Noto Sans CJK SC','Source Han Sans SC','PingFang SC',sans-serif";
                 const css = "@page{size:A4;margin:" + (MG[o.mg] || MG.n) + ";@bottom-center{content:counter(page) \" / \" counter(pages);font-size:8.5pt;color:#888;font-family:sans-serif}}" +
-                  "html,body{background:#fff;margin:0}body{color:#222;font-size:" + (FS[o.fs] || FS.m) + ";line-height:1.62;font-family:" + (o.ff === "hei" ? FFH : FFS) + ";text-align:start}" +
+                  "html,body{background:#fff;margin:0;max-width:100%;overflow-x:hidden}.pagedjs_pages,.pagedjs_page{overflow:hidden!important}.pagedjs_area,.pagedjs_page_content,.pbd,.pbd *{max-width:100%!important;box-sizing:border-box;min-width:0!important}.pbd{overflow-wrap:anywhere}.katex-display>.katex{max-width:100%;overflow:hidden}.c2 .katex-display{font-size:.8em!important}a{word-break:break-all}"+"body{color:#222;font-size:" + (FS[o.fs] || FS.m) + ";line-height:1.62;font-family:" + (o.ff === "hei" ? FFH : FFS) + ";text-align:start}" +
                   "*{text-align-last:auto!important;letter-spacing:normal!important;word-spacing:normal!important}p,li,td,th,h1,h2,h3,div{text-align:start!important}" +
                   ".ptl{border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}.ptl b{display:block;font-size:1.6em;line-height:1.3;font-family:sans-serif}.ptl span{font-size:.8em;color:#666}" +
                   ".pbd.c2{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb;column-fill:auto}" +
@@ -4896,7 +4897,7 @@ jobs:
                 const cfg0 = "window.onerror=function(m){try{PdfBridge.fail(String(m))}catch(e){}};" +
                   "window.PagedConfig={auto:true," +
                   "before:function(){try{PdfBridge.prog('正在加载图片和公式…')}catch(e){}var a=[].slice.call(document.images);return Promise.all(a.map(function(i){return i.complete?0:new Promise(function(r){i.onload=i.onerror=r;setTimeout(r,8000)})})).then(function(){try{PdfBridge.prog('正在加载字体…')}catch(e){}return document.fonts&&document.fonts.load?Promise.race([document.fonts.load('16px Noto Serif SC',document.body.textContent.slice(0,30000)),new Promise(function(r){setTimeout(r,15000)})]).catch(function(){}):0}).then(function(){try{PdfBridge.prog('正在分页排版…')}catch(e){}})}," +
-                  "after:function(f){var n=(f&&f.total)||document.querySelectorAll('.pagedjs_page').length;setTimeout(function(){PdfBridge.done(n)},500)}};";
+                  "after:function(f){try{var P=document.querySelector('.pagedjs_page');var W=P?P.getBoundingClientRect().width:0;[].slice.call(document.querySelectorAll('.pbd *')).forEach(function(e){if(W&&e.scrollWidth>W*0.95){e.style.maxWidth='100%';e.style.overflow='hidden'}});document.documentElement.style.overflow='hidden';document.body.style.overflow='hidden'}catch(e){}var n=(f&&f.total)||document.querySelectorAll('.pagedjs_page').length;setTimeout(function(){PdfBridge.done(n)},500)}};";
                 const cfg = cfg0 + ";(function(){var C=window.PagedConfig,b=C.before;C.before=function(){var t=(document.body&&document.body.innerText)||\"宋\";var w=Promise.all([document.fonts.load(\"16px 'Noto Serif SC'\",t),document.fonts.load(\"bold 16px 'Noto Serif SC'\",t)]).then(function(){return document.fonts.ready});var to=new Promise(function(r){setTimeout(r,15000)});return Promise.race([w,to]).catch(function(){}).then(function(){return b&&b.apply(this,arguments)})}})();";
                 const html = '<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="katex/katex.min.css"><link rel="stylesheet" href="fonts/serif.css"><style>' + css + "</style><script>" + cfg + '<\/script><script src="paged.polyfill.js"><\/script></head><body>' +
                   '<div class="ptl"><b>' + esc2(current.title || "笔记") + "</b><span>" + esc2(sub) + "</span></div>" +
@@ -5114,6 +5115,30 @@ jobs:
               "@keyframes fnPulse{50%{box-shadow:0 0 0 5px rgba(0,0,0,.08)}}" +
               ".dlg button,.modal button,[class*=ask] button{outline:none!important}";
             document.head.appendChild(st);
+          })();
+          // v2.0.5：鼠标悬停变灰、关于页修复
+          (function () {
+            const st = document.createElement("style");
+            st.textContent =
+              "@media (hover:hover) and (pointer:fine){" +
+              "#fnSetList button:hover,#fnSetHd button:hover,.nav button:not(.on):hover,.li:hover,.hist:hover,.chip:hover,.chip5:hover,.icon:hover,button.sec:hover,summary:hover,.card>summary:hover{background:rgba(120,120,128,.14)!important;transition:background .15s}" +
+              ".nav button.on:hover{filter:brightness(1.25)}button,summary,.li,.hist{cursor:pointer}}" +
+              "#pg-set .fnS.cur>*:not(.gt){display:block}#pg-set .fnS.cur .grp{opacity:1!important;visibility:visible!important;transform:none!important}";
+            document.head.appendChild(st);
+            const pg = $("pg-set"); if (!pg) return;
+            const grp = $("verTxt") && $("verTxt").closest(".grp");
+            const secs = Array.from(pg.querySelectorAll(".fnS"));
+            let sec = secs.find(x => { const t = x.querySelector(".gt"); return t && /关于/.test(t.textContent); });
+            if (grp && sec && !sec.contains(grp)) sec.appendChild(grp);
+            if (grp && !sec) { const p = grp.closest(".fnS"); if (p) sec = p; }
+            if (grp && sec && !$("fnFb")) {
+              const b = document.createElement("div"); b.className = "li"; b.id = "fnFb";
+              b.style.cssText = "display:flex;justify-content:space-between;padding:12px 0";
+              b.innerHTML = "<span>复制反馈信息</span><i class='ic'>content_copy</i>";
+              b.onclick = () => { try { const t = (typeof feedbackText === "function") ? feedbackText() : ("FrameNote " + APP_VER); navigator.clipboard.writeText(t).then(() => alert("已复制，可直接粘贴给我")).catch(() => prompt("复制以下内容", t)); } catch (e) {} };
+              grp.appendChild(b);
+              const cb = $("chgBox"); if (cb) cb.open = true;
+            }
           })();
           iconFallback();
           </script>
