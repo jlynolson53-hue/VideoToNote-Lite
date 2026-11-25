@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 76
-                  versionName "2.5.4"
+                  versionCode 77
+                  versionName "2.5.5"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -1837,13 +1837,31 @@ jobs:
                   }
 
                   @JavascriptInterface
+                  public void shareLast() {
+                      runOnUiThread(() -> {
+                          try {
+                              String p = System.getProperty("vtn.last"); if (p == null) return;
+                              Intent i = new Intent(Intent.ACTION_SEND); i.setType("application/pdf");
+                              i.putExtra(Intent.EXTRA_STREAM, Uri.parse(p));
+                              i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                              Intent c = Intent.createChooser(i, "分享 PDF"); c.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                              startActivity(c);
+                          } catch (Exception ignored) { }
+                      });
+                  }
+
+                  @JavascriptInterface
                   public void openLast() {
                       runOnUiThread(() -> {
                           try {
                               String p = System.getProperty("vtn.last"); if (p == null) return;
                               Intent i = new Intent(Intent.ACTION_VIEW); i.setDataAndType(Uri.parse(p), "application/pdf");
                               i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                              startActivity(Intent.createChooser(i, "打开 PDF"));
+                              boolean ok = false;
+                              for (String pk : new String[]{"com.hihonor.hnoffice", "com.huawei.hidisk", "com.hihonor.filemanager"}) {
+                                  try { Intent j = new Intent(i); j.setPackage(pk); startActivity(j); ok = true; break; } catch (Exception ig) { }
+                              }
+                              if (!ok) startActivity(Intent.createChooser(i, "打开 PDF"));
                           } catch (Exception ignored) { }
                       });
                   }
@@ -3913,8 +3931,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.5.4";
+          const APP_VER = "2.5.5";
           const CHANGELOG = [
+            ["2.5.5", "修复导出 PDF 预览右侧被裁掉一截（按实际宽度重新缩放，布局稳定后再校准一次）；导出完成后“打开”默认用荣耀文档，新增“分享”按钮可发给其他应用"],
             ["2.5.4", "导出 PDF 面板重新设计（参考 Awwwards、Land-book 等设计站的极简风格）：分组标题改为小号字母间距标签、分段按钮加高圆角并加按压反馈、按钮文字不再折行（“很宽（留批注）”改为“很宽”）；预览像一张真纸带柔和阴影，平板上预览区加浅色底板；取消/导出按钮固定在底部，翻到哪都能点"],
             ["2.5.3", "导出 PDF 面板加入实时预览：直接显示当前笔记第 1 页的真实排版，改字号、行距、段落间距、公式大小、字体、分栏、页边距、截图、页码、标题栏时立刻更新；平板横屏时预览在左、设置在右；修复“公式大小”在面板里看不出区别（原示例文字里没有公式）"],
             ["2.5.2", "元素周期表进度加入元素卡片：点亮到高中常考元素时显示一条重点化学方程式（如 Na 与水、实验室制氯气、银镜反应），其他元素显示一条小常识（如氦先在太阳上被发现、铯原子钟定义秒）；共 55 种元素有内容，每条至少停留约 3 秒，进度跳得快也来得及看"],
@@ -5098,7 +5117,7 @@ jobs:
             sst.textContent += ".vSheet.pdfS{border-radius:28px;padding-bottom:0}.vSheet.pdfS .lb{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.55;margin:14px 0 6px}" +
               ".vSheet.pdfS .seg{border-radius:14px;padding:3px;gap:2px}.vSheet.pdfS .seg .chip5{min-height:40px;border-radius:11px;font-size:14px;white-space:nowrap;transition:background .2s,color .2s,transform .15s}.vSheet.pdfS .seg .chip5:active{transform:scale(.96)}" +
               ".vSheet.pdfS .acts{position:sticky;bottom:0;margin:16px -24px 0;padding:12px 24px 16px;background:inherit;border-top:1px solid rgba(128,128,128,.18);backdrop-filter:blur(12px);z-index:3}" +
-              ".pdfS .lpvF{border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 12px 32px -8px rgba(0,0,0,.35);transition:height .25s}.pdfS .lpvT{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}" +
+              ".pdfS .lpvF{width:100%;box-sizing:border-box;border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 12px 32px -8px rgba(0,0,0,.35);transition:height .25s}.pdfS .lpvT{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}" +
               ".lpv .pgx{transition:padding .25s}.lpv .pgx .pbd{transition:font-size .2s}" +
               "@media (min-width:900px){.vSheet.pdfS>.lpv{padding:18px;border-radius:20px;background:rgba(128,128,128,.10)}}";
             document.head.appendChild(sst);
@@ -5143,7 +5162,7 @@ jobs:
                 if (o.img === "0") tmp.querySelectorAll("img,figure,.shot").forEach(x => x.remove());
                 if (o.img === "2") { Array.from(tmp.querySelectorAll("h1,h2,h3,h4")).filter(h => /课堂截图/.test(h.textContent)).forEach(h => { const lv = +h.tagName[1]; let n = h.nextElementSibling; while (n && !(/^H[1-4]$/.test(n.tagName) && +n.tagName[1] <= lv) && n.tagName !== "HR") { const x = n; n = n.nextElementSibling; x.remove(); } h.remove(); }); }
               }
-              function pvFit() { const f = lpv.querySelector(".lpvF"), w = f.clientWidth || 300; const k = w / 794; lpv.querySelector(".pgx").style.transform = "scale(" + k + ")"; f.style.height = Math.round(1123 * k) + "px"; }
+              function pvFit() { const f = lpv.querySelector(".lpvF"); const w = Math.floor(Math.min(f.getBoundingClientRect().width || 300, (lpv.getBoundingClientRect().width || 9999))) - 1; const k = Math.max(w, 120) / 794; lpv.querySelector(".pgx").style.transform = "scale(" + k + ")"; f.style.height = Math.round(1123 * k) + "px"; }
               function pvPaint() {
                 pvBody();
                 const g = lpv.querySelector(".pgx"), mg = (MG[o.mg] || MG.n);
@@ -5175,7 +5194,7 @@ jobs:
               m.querySelector('[data-a="x"]').onclick = close;
               m.querySelector('[data-a="go"]').onclick = async () => { localStorage.setItem("vtn_pdf", JSON.stringify(o)); close(); await go(o); };
               window.__sheetClose = close; document.body.appendChild(m);
-              try { pvPaint(); new ResizeObserver(pvFit).observe(lpv.querySelector(".lpvF")); } catch (e) {}
+              try { pvPaint(); new ResizeObserver(pvFit).observe(lpv.querySelector(".lpvF")); new ResizeObserver(pvFit).observe(lpv); requestAnimationFrame(pvFit); setTimeout(pvFit, 350); window.addEventListener("resize", pvFit); } catch (e) {}
             }
             async function legacyGo(o) {
               if (!HAS_NATIVE || !Native.printPdf2) { snack("请在安卓应用里使用"); return; }
@@ -5242,7 +5261,7 @@ jobs:
                   new Promise((_, rej) => setTimeout(() => rej(new Error("超过 150 秒没有完成")), 150000))
                 ]);
                 window.__nativeProg = old;
-                if (await window.__askOr("PDF 已导出", "打开文件", (r.pages ? "共 " + r.pages + " 页。\n" : "") + (r.msg || "") + "\n也可以在“文件管理 → 下载 → VideoToNote”里找到。", false, "好的")) { try { Native.openLast(); } catch (e) {} }
+                { const dm = document.createElement("div"); dm.className = "vDlgM"; dm.innerHTML = '<div class="vDlg"><div class="tt">PDF 已导出</div><div class="mm"></div><div class="bb"><button data-r="0">好的</button><button data-r="2">分享</button><button data-r="1">打开</button></div></div>'; dm.querySelector(".mm").textContent = (r.pages ? "共 " + r.pages + " 页。\n" : "") + (r.msg || "") + "\n默认用荣耀文档打开；想发给别人或用其他应用，点“分享”。"; const dc = () => { dm.remove(); if (window.__dlgClose === dc) window.__dlgClose = null; }; dm.onclick = e => { const x = e.target.closest("[data-r]"); if (!x && e.target !== dm) return; dc(); if (x && x.dataset.r === "1") { try { Native.openLast(); } catch (er) {} } else if (x && x.dataset.r === "2") { try { Native.shareLast(); } catch (er) {} } }; window.__dlgClose = dc; document.body.appendChild(dm); }
               } catch (e) {
                 window.__nativeProg = old;
                 const ok = await window.__askOr("导出没成功", "改用系统打印", "停在：" + lastStep + "\n原因：" + e.message + "\n\n可以先用系统打印（在打印界面选“另存为 PDF”）。请把这个提示截图发给我。");
