@@ -67,6 +67,11 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+              <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
@@ -88,6 +93,7 @@ jobs:
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
                   </activity>
+                  <service android:name=".BuildService" android:exported="false" android:foregroundServiceType="dataSync" />
               </application>
           </manifest>
           EOF_M
@@ -185,10 +191,13 @@ jobs:
           
           public class MainActivity extends Activity {
               WebView wv;
+              static MainActivity inst;
+              static volatile boolean visible = false;
           
               @Override
               protected void onCreate(Bundle b) {
                   super.onCreate(b);
+                  inst = this;
                   bars(0xFFF6F6F4, true);
                   wv = new WebView(this);
                   wv.setBackgroundColor(0x00000000);
@@ -227,7 +236,13 @@ jobs:
               void refresh() { if (wv != null) wv.evaluateJavascript("window.onAppResume&&onAppResume()", null); }
           
               @Override
-              protected void onResume() { super.onResume(); refresh(); }
+              protected void onResume() { super.onResume(); visible = true; refresh(); }
+
+              @Override
+              protected void onPause() { super.onPause(); visible = false; }
+
+              @Override
+              protected void onDestroy() { if (inst == this) inst = null; super.onDestroy(); }
           
               @Override
               public void onRequestPermissionsResult(int code, String[] p, int[] r) { super.onRequestPermissionsResult(code, p, r); refresh(); }
@@ -317,6 +332,36 @@ jobs:
           
               class Bridge {
                   @JavascriptInterface public boolean hasAccess() { return has(); }
+
+                  @JavascriptInterface
+                  public boolean startWatch(String cfg) {
+                      if (BuildService.running) return false;
+                      BuildService.running = true;
+                      BuildService.reset();
+                      try {
+                          Intent i = new Intent(MainActivity.this, BuildService.class).putExtra("cfg", cfg);
+                          if (Build.VERSION.SDK_INT >= 26) startForegroundService(i); else startService(i);
+                          return true;
+                      } catch (Exception e) { BuildService.running = false; js("e", "启动后台服务失败：" + e.getMessage()); return false; }
+                  }
+                  @JavascriptInterface public boolean svcRunning() { return BuildService.running; }
+                  @JavascriptInterface public String events() { return BuildService.events(); }
+                  @JavascriptInterface public boolean canPop() { return Settings.canDrawOverlays(MainActivity.this); }
+                  @JavascriptInterface
+                  public void requestPop() {
+                      try { startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))); }
+                      catch (Exception e) { try { startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)); } catch (Exception ignored) {} }
+                  }
+                  @JavascriptInterface
+                  public boolean batOk() {
+                      android.os.PowerManager p = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                      return p != null && p.isIgnoringBatteryOptimizations(getPackageName());
+                  }
+                  @JavascriptInterface
+                  public void requestBat() {
+                      try { startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName()))); }
+                      catch (Exception e) { try { startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); } catch (Exception ignored) {} }
+                  }
 
                   @JavascriptInterface
                   public void setBars(final String hex, final boolean light) {
@@ -457,6 +502,309 @@ jobs:
               }
           }
           EOF_J
+          mkdir -p "$(dirname 'app/src/main/java/com/vtn/uploader/BuildService.java')"
+          cat > 'app/src/main/java/com/vtn/uploader/BuildService.java' <<'EOF_V'
+          package com.vtn.uploader;
+
+          import android.app.Notification;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.app.PendingIntent;
+          import android.app.Service;
+          import android.content.Intent;
+          import android.content.pm.PackageInfo;
+          import android.content.pm.PackageManager;
+          import android.content.pm.ServiceInfo;
+          import android.net.Uri;
+          import android.os.Build;
+          import android.os.Environment;
+          import android.os.IBinder;
+          import android.os.PowerManager;
+          import android.provider.Settings;
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+          import java.io.ByteArrayOutputStream;
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.InputStream;
+          import java.net.HttpURLConnection;
+          import java.net.URL;
+          import java.util.ArrayList;
+          import java.util.List;
+
+          public class BuildService extends Service {
+              static volatile boolean running = false;
+              static final List<String[]> EV = new ArrayList<String[]>();
+              String tok, repo, sha, pkg, dsh;
+              int toMin, code;
+              boolean auto, only;
+              PowerManager.WakeLock wl;
+              NotificationManager nm;
+
+              @Override public IBinder onBind(Intent i) { return null; }
+
+              static void reset() { synchronized (EV) { EV.clear(); } }
+
+              static String events() {
+                  JSONArray a = new JSONArray();
+                  synchronized (EV) { for (String[] e : EV) { JSONArray x = new JSONArray(); x.put(e[0]); x.put(e[1]); a.put(x); } }
+                  return a.toString();
+              }
+
+              void emit(String t, String m) {
+                  if (!t.equals("p")) synchronized (EV) { EV.add(new String[]{t, m}); }
+                  MainActivity a = MainActivity.inst;
+                  if (a != null) a.js(t, m);
+              }
+
+              void status(String t, String sub) { emit("st", t + "|" + sub); ongoing(t, sub, -2); }
+
+              Notification.Builder nb(String ch) { return Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, ch) : new Notification.Builder(this); }
+
+              PendingIntent pi(Intent i, int rc) {
+                  if (i == null) i = new Intent(this, MainActivity.class);
+                  i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                  return PendingIntent.getActivity(this, rc, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+              }
+
+              Notification ongoingN(String t, String sub, int pct) {
+                  Notification.Builder b = nb("run").setSmallIcon(R.drawable.ic_stat).setContentTitle(t).setContentText(sub)
+                      .setOngoing(true).setOnlyAlertOnce(true).setContentIntent(pi(null, 1));
+                  if (pct >= 0) b.setProgress(100, pct, false); else if (pct == -1) b.setProgress(0, 0, true);
+                  return b.build();
+              }
+
+              void ongoing(String t, String sub, int pct) { try { nm.notify(2, ongoingN(t, sub, pct)); } catch (Exception ignored) {} }
+
+              void result(String t, String sub, Intent target) {
+                  try {
+                      nm.notify(3, nb("done").setSmallIcon(R.drawable.ic_stat).setContentTitle(t).setContentText(sub)
+                          .setAutoCancel(true).setPriority(Notification.PRIORITY_HIGH).setContentIntent(pi(target, 3)).build());
+                  } catch (Exception ignored) {}
+              }
+
+              @Override
+              public int onStartCommand(Intent it, int flags, int id) {
+                  nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                  if (Build.VERSION.SDK_INT >= 26) {
+                      nm.createNotificationChannel(new NotificationChannel("run", "后台进度", NotificationManager.IMPORTANCE_LOW));
+                      nm.createNotificationChannel(new NotificationChannel("done", "完成提醒", NotificationManager.IMPORTANCE_HIGH));
+                  }
+                  Notification n = ongoingN("build助手", "后台运行中", -1);
+                  if (Build.VERSION.SDK_INT >= 29) startForeground(2, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+                  else startForeground(2, n);
+                  try {
+                      JSONObject o = new JSONObject(it.getStringExtra("cfg"));
+                      tok = o.optString("tok"); repo = o.optString("repo"); sha = o.optString("sha");
+                      pkg = o.optString("pkg"); dsh = o.optString("dsh");
+                      toMin = o.optInt("to", 25); auto = o.optBoolean("auto", true); only = o.optBoolean("only", false);
+                  } catch (Exception e) { running = false; stopForeground(true); stopSelf(); return START_NOT_STICKY; }
+                  PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+                  wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "vtn:build");
+                  wl.acquire(90 * 60 * 1000L);
+                  new Thread(new Runnable() { public void run() {
+                      try { work(); }
+                      catch (Exception e) { emit("e", String.valueOf(e.getMessage())); result("build助手出错", String.valueOf(e.getMessage()), null); }
+                      finally {
+                          running = false;
+                          emit("done", "");
+                          try { if (wl.isHeld()) wl.release(); } catch (Exception ignored) {}
+                          stopForeground(true);
+                          stopSelf();
+                      }
+                  }}).start();
+                  return START_NOT_STICKY;
+              }
+
+              static String read(InputStream in) throws Exception {
+                  if (in == null) return "";
+                  ByteArrayOutputStream b = new ByteArrayOutputStream();
+                  byte[] buf = new byte[16384]; int n;
+                  while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
+                  in.close();
+                  return b.toString("UTF-8");
+              }
+
+              String gh(String path) throws Exception {
+                  HttpURLConnection c = (HttpURLConnection) new URL("https://api.github.com" + path).openConnection();
+                  c.setConnectTimeout(20000); c.setReadTimeout(30000);
+                  c.setRequestProperty("Accept", "application/vnd.github+json");
+                  c.setRequestProperty("User-Agent", "vtn-uploader");
+                  if (tok != null && tok.length() > 0) c.setRequestProperty("Authorization", "token " + tok);
+                  code = c.getResponseCode();
+                  return read(code >= 400 ? c.getErrorStream() : c.getInputStream());
+              }
+
+              static String p2(long n) { return n < 10 ? "0" + n : "" + n; }
+
+              void work() throws Exception {
+                  if (!only) {
+                      emit("step", "1");
+                      long t0 = System.currentTimeMillis(), end = t0 + toMin * 60000L;
+                      String last = "";
+                      boolean ok = false;
+                      while (System.currentTimeMillis() < end) {
+                          Thread.sleep(10000);
+                          long sec = (System.currentTimeMillis() - t0) / 1000;
+                          String tm = (sec / 60) + ":" + p2(sec % 60);
+                          String body;
+                          try { body = gh("/repos/" + repo + "/actions/runs?head_sha=" + sha + "&per_page=10"); } catch (Exception e) { continue; }
+                          if (code != 200) continue;
+                          JSONArray runs = new JSONObject(body).optJSONArray("workflow_runs");
+                          JSONObject rn = null;
+                          if (runs != null) for (int i = 0; i < runs.length(); i++) {
+                              JSONObject x = runs.getJSONObject(i);
+                              if (!sha.equals(x.optString("head_sha"))) continue;
+                              if (rn == null) rn = x;
+                              if ((x.optString("path") + x.optString("name")).toLowerCase().contains("build")) { rn = x; break; }
+                          }
+                          if (rn == null) { status("等待编译开始", "已等 " + tm + "，可以切到后台"); continue; }
+                          String st = rn.optString("status"), cc = rn.optString("conclusion"), url = rn.optString("html_url");
+                          status("queued".equals(st) ? "排队中" : "编译中", "已用 " + tm + "，可以切到后台");
+                          String k = st + "/" + cc;
+                          if (k.equals(last)) continue;
+                          last = k;
+                          if ("in_progress".equals(st)) { emit("d", "编译中…"); emit("link", "编译日志|" + url); }
+                          else if ("completed".equals(st)) {
+                              if ("success".equals(cc)) { emit("g", "编译成功，用时 " + tm); ok = true; break; }
+                              emit("step", "1|bad"); emit("st", "编译失败|" + cc); emit("link", "失败日志|" + url);
+                              result("编译失败", "点开查看日志", new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                              return;
+                          }
+                      }
+                      if (!ok) {
+                          String a = "https://github.com/" + repo + "/actions";
+                          emit("st", "等待超时|可到 Actions 页面看进度"); emit("link", "Actions 页面|" + a);
+                          result("等待编译超时", "点开查看 Actions", new Intent(Intent.ACTION_VIEW, Uri.parse(a)));
+                          return;
+                      }
+                      if (!auto) {
+                          emit("step", "2"); emit("st", "编译成功|点下面按钮下载"); emit("btn", "下载最新版");
+                          result("编译成功", "打开 build助手 下载", null);
+                          return;
+                      }
+                      Thread.sleep(3000);
+                  }
+                  download();
+              }
+
+              void download() throws Exception {
+                  emit("step", "2");
+                  status("查找最新版", "");
+                  JSONObject rel = null, asset = null;
+                  for (int t = 0; t < 6 && asset == null; t++) {
+                      if (t > 0) Thread.sleep(10000);
+                      String body;
+                      try { body = gh("/repos/" + repo + "/releases?per_page=15"); } catch (Exception e) { if (t == 5) throw e; continue; }
+                      if (code != 200) { if (t == 5) throw new Exception("读取发布列表失败（HTTP " + code + "）"); continue; }
+                      JSONArray a = new JSONArray(body);
+                      for (int i = 0; i < a.length() && asset == null; i++) {
+                          JSONObject x = a.getJSONObject(i);
+                          if (x.optBoolean("draft") || x.optBoolean("prerelease")) continue;
+                          JSONArray as = x.optJSONArray("assets");
+                          if (as == null) continue;
+                          for (int j = 0; j < as.length(); j++) {
+                              JSONObject y = as.getJSONObject(j);
+                              String n = y.optString("name");
+                              if (n.toLowerCase().endsWith(".apk") && !n.contains("BuildUploader")) { rel = x; asset = y; break; }
+                          }
+                      }
+                  }
+                  if (asset == null) throw new Exception("没找到视频笔记的 APK 发布");
+                  String tag = rel.optString("tag_name", "latest"), title = rel.optString("name", "");
+                  if (title.length() == 0 || "null".equals(title)) title = tag;
+                  emit("lv", title);
+                  emit("d", "开始下载：" + title + " · " + String.format("%.1f MB", asset.optLong("size") / 1048576.0));
+                  status("下载中", title + "，可以切到后台");
+                  File f = fetch(asset.optString("browser_download_url"), "VideoToNote-" + tag + ".apk");
+                  check(f);
+                  emit("dl", f.getAbsolutePath());
+                  emit("step", "3");
+                  emit("st", "下载完成|" + title);
+                  launch(title);
+              }
+
+              File fetch(String url, String name) throws Exception {
+                  File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "VideoToNote");
+                  dir.mkdirs();
+                  File part = new File(dir, name + ".part"), dst = new File(dir, name);
+                  if (part.exists()) part.delete();
+                  long total = -1;
+                  Exception lastE = null;
+                  for (int at = 1; at <= 5; at++) {
+                      try {
+                          long have = part.exists() ? part.length() : 0;
+                          HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                          c.setInstanceFollowRedirects(true); c.setConnectTimeout(20000); c.setReadTimeout(30000);
+                          c.setRequestProperty("User-Agent", "vtn-uploader");
+                          if (have > 0) c.setRequestProperty("Range", "bytes=" + have + "-");
+                          int rc = c.getResponseCode();
+                          if (rc != 200 && rc != 206) throw new Exception("HTTP " + rc);
+                          if (rc == 200) have = 0;
+                          long len = c.getContentLength();
+                          if (len > 0) total = have + len;
+                          InputStream in = c.getInputStream();
+                          FileOutputStream out = new FileOutputStream(part, have > 0);
+                          byte[] buf = new byte[65536];
+                          long got = have; int n, lastPct = -2;
+                          try {
+                              while ((n = in.read(buf)) > 0) {
+                                  out.write(buf, 0, n); got += n;
+                                  int pct = total > 0 ? (int) (got * 100 / total) : -1;
+                                  if (pct != lastPct) { lastPct = pct; emit("p", "" + pct); ongoing("下载中", pct >= 0 ? pct + "%" : "", pct >= 0 ? pct : -1); }
+                              }
+                          } finally { out.close(); in.close(); }
+                          if (total > 0 && got < total) throw new Exception("只收到 " + got + "/" + total + " 字节");
+                          lastE = null;
+                          break;
+                      } catch (Exception e) {
+                          lastE = e;
+                          emit("w", "第 " + at + " 次下载中断（" + e.getMessage() + "），" + (at < 5 ? "3 秒后续传" : "放弃"));
+                          Thread.sleep(3000);
+                      }
+                  }
+                  if (lastE != null) throw new Exception("下载失败：" + lastE.getMessage() + "。检查网络或 VPN 后重试");
+                  if (dst.exists()) dst.delete();
+                  if (!part.renameTo(dst)) throw new Exception("保存文件失败");
+                  return dst;
+              }
+
+              void check(File dst) {
+                  try {
+                      PackageManager pmg = getPackageManager();
+                      PackageInfo ai = pmg.getPackageArchiveInfo(dst.getPath(), PackageManager.GET_SIGNATURES);
+                      if (ai == null) { emit("w", "下载的文件不像有效的 APK"); return; }
+                      String note = "APK 版本 " + ai.versionName + "（" + MainActivity.vc(ai) + "）";
+                      PackageInfo ii = null;
+                      try { ii = pmg.getPackageInfo(pkg, PackageManager.GET_SIGNATURES); } catch (Exception ignored) {}
+                      if (ii != null) {
+                          String s1 = MainActivity.sig(ii), s2 = MainActivity.sig(ai);
+                          if (s1 != null && s2 != null && !s1.equals(s2)) emit("w", "注意：签名和已装的不一致，直接覆盖会失败");
+                          else note += "，签名一致";
+                          if (MainActivity.vc(ai) <= MainActivity.vc(ii)) emit("w", "这个 APK 不比已装的新（已装 " + ii.versionName + "）");
+                      }
+                      emit("i", note);
+                  } catch (Exception ignored) {}
+              }
+
+              void launch(String title) {
+                  Intent i = (dsh == null || dsh.length() == 0) ? null : getPackageManager().getLaunchIntentForPackage(dsh);
+                  if (i == null) {
+                      emit("w", "没有设置或找不到 DSH GO，请在 更新 页选择");
+                      result("新版视频笔记已下载", title, null);
+                      return;
+                  }
+                  i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                  if (MainActivity.visible || Settings.canDrawOverlays(this)) {
+                      try { startActivity(i); emit("g", "已自动打开 DSH GO"); emit("step", "4"); }
+                      catch (Exception e) { emit("w", "自动打开失败：" + e.getMessage()); }
+                  } else {
+                      emit("w", "没开「显示在其他应用上层」，系统不让后台直接跳转，已发通知，点通知进入 DSH GO");
+                  }
+                  result("新版视频笔记已下载", "点这里打开 DSH GO 安装 " + title, i);
+              }
+          }
+          EOF_V
           mkdir -p "$(dirname 'app/src/main/assets/index.html')"
           cat > 'app/src/main/assets/index.html' <<'EOF_H'
           <!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
@@ -542,6 +890,11 @@ jobs:
           <label>仓库</label><input id="repo" type="text">
           <div class="row" style="margin-top:0"><div><label>分支</label><input id="br" type="text"></div><div><label>最长等待（分钟）</label><input id="to" type="number"></div></div>
           <label>仓库内路径</label><input id="tg" type="text"></div>
+          <div class="c"><h2>后台运行</h2>
+          <div class="kv"><span>后台完成后直接跳转 DSH GO</span><span id="popv">-</span></div>
+          <div class="kv"><span>不受省电限制</span><span id="batv">-</span></div>
+          <div class="row"><button onclick="App.requestPop()">开启悬浮窗权限</button><button onclick="App.requestBat()">关闭省电限制</button></div>
+          <div class="m" style="margin-top:10px">开了「显示在其他应用上层」，后台下载完会直接跳到 DSH GO；没开只发通知，点一下进入。</div></div>
           <div class="c"><h2>行为</h2>
           <label>视频笔记包名</label><input id="pkg" type="text">
           <label class="chk"><input id="auto" type="checkbox">编译成功后自动下载并打开 DSH GO</label>
@@ -590,32 +943,32 @@ jobs:
           $("f").onchange=showFile;
           function showInst(){const s=App.installedInfo($("pkg").value.trim());if(!s){$("iv").textContent="未安装";return}
            const i=JSON.parse(s);$("iv").textContent=i.name+"（"+i.code+"）"}
-          window.onAppResume=()=>{showInst();loadApps();if(!busy)loadFiles(false)};
+          window.onAppResume=()=>{bg();showInst();loadApps();if(!busy)loadFiles(false)};
           async function gh(path,o={}){const h={Accept:"application/vnd.github+json",Authorization:"token "+LS.getItem("vtn_tok")};if(o.body)h["Content-Type"]="application/json";
            try{const r=await fetch(API+path,{method:o.method||"GET",headers:h,body:o.body?JSON.stringify(o.body):undefined,cache:"no-store"});let j=null;try{j=await r.json()}catch(e){}return{s:r.status,j}}catch(e){return{s:0,j:{message:String(e)}}}}
           function repo(){return $("repo").value.trim().replace(/^\/|\/$/g,"")}
           async function act(fn){if(busy)return App.toast("正在进行中");busy=true;$("go").disabled=true;$("links").innerHTML="";$("log").innerHTML="";bar(null);
-           try{await fn()}catch(e){say(e.message,"r");st("出错了",e.message)}finally{busy=false;$("go").disabled=false;App.keepScreen(false)}}
+           try{await fn()}catch(e){say(e.message,"r");st("出错了",e.message)}finally{if(!App.svcRunning()){busy=false;$("go").disabled=false}App.keepScreen(false)}}
           async function latestRel(){const r=await gh("/repos/"+repo()+"/releases?per_page=15");if(r.s!=200)throw new Fail("读取发布列表失败（HTTP "+r.s+"）");
            for(const x of r.j){if(x.draft||x.prerelease)continue;const a=(x.assets||[]).find(a=>/\.apk$/i.test(a.name)&&!/BuildUploader/i.test(a.name));if(a)return{rel:x,asset:a}}
            throw new Fail("没找到视频笔记的 APK 发布")}
           async function checkLatest(){st("检查中","");const {rel,asset}=await latestRel();const t=(rel.name||rel.tag_name);
            $("lv").textContent=t;say("线上最新："+t+" · "+asset.name);showInst();st("检查完成",t)}
-          window.onNative=(t,m)=>{if(t=="p"){bar(+m);$("sub").textContent=m>=0?"已下载 "+m+"%":"下载中…";return}
-           if(t=="dl"){if(dlWait){dlWait({ok:true,path:m});dlWait=null}return}
-           say(m,t=="e"?"r":t=="w"?"y":"d");if(t=="e"&&dlWait){dlWait({ok:false,msg:m});dlWait=null}};
-          async function downloadLatest(fromBuild){
-           if(!App.hasAccess()){App.requestAccess();throw new Fail("需要文件权限才能保存 APK")}
-           step(2);st("查找最新版","");const {rel,asset}=await latestRel();const t=rel.name||rel.tag_name;$("lv").textContent=t;
-           say("开始下载："+t+" · "+(asset.size/1048576).toFixed(1)+" MB");st("下载中",t);bar(0);App.keepScreen(true);
-           const name="VideoToNote-"+(rel.tag_name||"latest")+".apk";
-           const res=await new Promise(r=>{dlWait=r;App.download(asset.browser_download_url,name,$("pkg").value.trim());setTimeout(()=>{if(dlWait){dlWait({ok:false,msg:"下载超过 10 分钟"});dlWait=null}},600000)});
-           bar(null);if(!res.ok){step(2,"bad");throw new Fail(res.msg)}
-           $("dv").textContent=res.path.replace(/^.*\/Download\//,"下载/");say("已保存："+res.path,"g");
-           step(3);st("下载完成","已保存到 "+$("dv").textContent);
-           btn("打开 DSH GO",()=>openDsh(true),true);
-           App.notify("新版视频笔记已下载",t+"，点开进入 DSH GO",dshPkg());
-           if(fromBuild!==true||$("auto").checked){if(openDsh(false)){say("已打开 DSH GO","d");step(4)}else say("没有设置或打不开 DSH GO，请在右侧选择","y")}}
+          window.onNative=(t,m)=>{const a=String(m).split("|");
+           if(t=="p"){bar(+m);$("sub").textContent=m>=0?"已下载 "+m+"%，可以切到后台":"下载中…";return}
+           if(t=="st"){st(a[0],a[1]||"");return}
+           if(t=="step"){step(+a[0],a[1]);return}
+           if(t=="link"){link(a[0],a.slice(1).join("|"));return}
+           if(t=="btn"){btn(m,()=>act(downloadLatest),true);return}
+           if(t=="lv"){$("lv").textContent=m;return}
+           if(t=="dl"){$("dv").textContent=m.split("/").pop();bar(null);btn("打开 DSH GO",()=>openDsh(true),true);showInst();return}
+           if(t=="done"){busy=false;$("go").disabled=false;bg();return}
+           say(m,t=="e"?"r":t=="w"?"y":t=="g"?"g":"d");if(t=="e")st("出错了",m)};
+          function bg(){try{$("popv").innerHTML=App.canPop()?'<span class="pill ok">已开启</span>':'<span class="pill no">未开启</span>';$("batv").innerHTML=App.batOk()?'<span class="pill ok">是</span>':'<span class="pill no">否</span>'}catch(e){}}
+          function svcStart(o){if(!App.startWatch(JSON.stringify({tok:LS.getItem("vtn_tok")||"",repo:repo(),sha:o.sha||"",pkg:$("pkg").value.trim(),dsh:dshPkg(),to:+$("to").value||25,auto:!!o.auto,only:!!o.only})))throw new Fail("后台任务已在运行，或启动失败");
+           say("已交给后台服务，可以离开本 App","d");if(!App.canPop())say("没开「显示在其他应用上层」，完成时只发通知，点通知进入 DSH GO（设置页可开启）","y")}
+          async function downloadLatest(){if(!App.hasAccess()){App.requestAccess();throw new Fail("需要文件权限才能保存 APK")}
+           step(2);st("下载中","已交给后台，可以切到别的 App");svcStart({auto:true,only:true})}
           async function run(){
            const path=$("f").value;if(!path)throw new Fail("没有可上传的文件");
            if(!LS.getItem("vtn_tok"))throw new Fail("还没设置 token，请在 设置 里填写");
@@ -645,24 +998,8 @@ jobs:
             if(/workflow/i.test(det))throw new Fail("token 缺 workflow 权限");
             throw new Fail("上传失败（HTTP "+r.s+"）："+det)}
            const sha=res.commit.sha;say("上传成功，提交 "+sha.slice(0,7),"g");link("查看提交",res.commit.html_url);
-           step(1);st("等待编译","通常 2-10 分钟，请让本 App 留在前台");App.keepScreen(true);
-           const t0=Date.now(),dl=t0+(+$("to").value||25)*60000;let last="";
-           while(Date.now()<dl){await sleep(10000);
-            const q=await gh("/repos/"+R+"/actions/runs?head_sha="+sha+"&per_page=10");if(q.s!=200)continue;
-            const rn=(q.j.workflow_runs||[]).find(x=>x.head_sha==sha&&/build/i.test(x.path||x.name||""))||(q.j.workflow_runs||[]).find(x=>x.head_sha==sha);
-            const sec=Math.round((Date.now()-t0)/1000),tm=Math.floor(sec/60)+":"+p2(sec%60);
-            if(!rn){st("等待编译开始","已等 "+tm);continue}
-            st(({queued:"排队中",in_progress:"编译中"}[rn.status]||"编译中"),"已用 "+tm);
-            const k=rn.status+"/"+rn.conclusion;if(k==last)continue;last=k;
-            if(rn.status=="in_progress"){say("编译中…","d");link("编译日志",rn.html_url)}
-            else if(rn.status=="completed"){
-             if(rn.conclusion=="success"){say("编译成功，用时 "+tm,"g");
-              if($("auto").checked){await sleep(3000);await downloadLatest(true)}
-              else{step(2);st("编译成功","点下面按钮下载");btn("下载最新版",()=>act(downloadLatest),true);App.notify("编译成功","打开上传助手下载","")}
-              return}
-             step(1,"bad");st("编译失败",rn.conclusion);link("失败日志",rn.html_url);App.notify("编译失败","打开查看日志","");return}}
-           st("等待超时","可到 Actions 页面看进度");link("Actions 页面","https://github.com/"+R+"/actions")}
-          theme();tab(+LS.getItem("vtn_tab")||0);loadOpt();showTok();loadFiles(false);showInst();loadApps();
+           step(1);st("等待编译","已交给后台，可以切走，完成后自动下载并打开 DSH GO");svcStart({sha,auto:$("auto").checked})}
+          theme();tab(+LS.getItem("vtn_tab")||0);loadOpt();showTok();loadFiles(false);showInst();loadApps();bg();if(App.svcRunning()){busy=true;$("go").disabled=true}JSON.parse(App.events()).forEach(e=>onNative(e[0],e[1]));
           </script></body></html>
           EOF_H
 
@@ -694,4 +1031,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_NO: ${{ github.run_number }}
         run: |
-          gh release create "uploader-1.0.$RUN_NO" BuildUploader.apk --prerelease --title "build助手 1.0.$RUN_NO" --notes "build助手自动构建（新图标与新界面）（预发布，不影响视频笔记的 latest）"
+          gh release create "uploader-1.0.$RUN_NO" BuildUploader.apk --prerelease --title "build助手 1.0.$RUN_NO" --notes "build助手自动构建（后台运行：编译、下载完成后自动打开 DSH GO）（预发布，不影响视频笔记的 latest）"
