@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 66
-                  versionName "2.2.0"
+                  versionCode 67
+                  versionName "2.2.1"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -3913,8 +3913,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.2.0";
+          const APP_VER = "2.2.1";
           const CHANGELOG = [
+            ["2.2.1", "修复选了本地视频后点“生成笔记”提示“请先粘贴视频链接”：选中后输入框自动填入本地视频名并锁定"],
             ["2.2.0", "支持本地视频：生成页可选择本地视频；优先用视频内嵌字幕，也可选外挂字幕（srt/vtt/ass）；都没有时用本机离线语音转写（SenseVoice + Silero VAD，不耗额度，需先导入模型文件）；本地视频也能自动截图"],
             ["2.1.3", "笔记库搜索框改为整条同色（学 Grok），点开变白加细边，可一键清空；动效优化：切页轻微上浮、笔记卡片依次浮现、按钮回弹、公式弹窗缩放弹出、展开内容渐入；系统开启减少动画时自动关闭动效"],
             ["2.1.2", "点公式弹出放大查看（可放大缩小、复制 LaTeX），长按公式直接复制 LaTeX；阅读页长公式可左右滑动；带时间的截图说明可点击跳回 B 站对应时刻；修复浅色模式下系统为深色时按钮看不见，深色模式标题竖线、呼吸圈、公式颜色修正"],
@@ -5485,7 +5486,7 @@ jobs:
               try {
                 const r = await ncall("pickVideo"); if (r.cancel) return;
                 L.cur = { uri: r.uri, name: r.name || "本地视频", dur: r.dur || 0, subs: r.subs || [], audio: r.audio, bv: "LV" + (Date.now() % 100000000) };
-                L.sub = null; if (inp) { inp.value = ""; inp.placeholder = "已选择本地视频；要用 B 站链接请点“改用 B 站链接”"; }
+                L.sub = null; if (inp) { inp.value = "本地视频：" + L.cur.name; inp.readOnly = true; }
                 paint();
               } catch (e) { snack(e.message); }
             };
@@ -5497,7 +5498,9 @@ jobs:
                 L.sub = { name: r.name || "字幕", segs }; paint();
               } catch (e) { snack(e.message); }
             };
-            $("lvClr").onclick = () => { L.cur = null; L.sub = null; if (inp) inp.placeholder = ph; paint(); };
+            $("lvClr").onclick = () => { L.cur = null; L.sub = null; if (inp) { inp.value = ""; inp.readOnly = false; inp.placeholder = ph; } paint(); };
+            ["goBtn", "subOnly"].forEach(id => { const b = $(id); if (b) b.addEventListener("click", () => { if (L.cur && inp && !inp.value.trim()) inp.value = "本地视频：" + L.cur.name; }, true); });
+            try { const m = mst(); if (m.ok) log("本机转写模型已就绪（已保存在 App 内，无需重复导入）"); } catch (e) {}
             function parseSub(t) {
               t = String(t).replace(/^\uFEFF/, "").replace(/\r/g, "");
               const segs = [];
