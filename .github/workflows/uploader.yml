@@ -78,7 +78,7 @@ jobs:
                   </intent>
                   <package android:name="com.vtn.lite" />
               </queries>
-              <application android:label="build上传助手" android:icon="@android:drawable/stat_sys_upload"
+              <application android:label="build助手" android:icon="@drawable/ic_launcher" android:roundIcon="@drawable/ic_launcher"
                   android:requestLegacyExternalStorage="true"
                   android:theme="@android:style/Theme.Material.Light.NoActionBar">
                   <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask"
@@ -91,6 +91,58 @@ jobs:
               </application>
           </manifest>
           EOF_M
+          mkdir -p "$(dirname 'app/src/main/res/drawable/ic_fg.xml')"
+          cat > 'app/src/main/res/drawable/ic_fg.xml' <<'EOF_I'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+          <path android:fillColor="#FFFFFF" android:pathData="M50,28h8v26h-8z"/>
+          <path android:fillColor="#FFFFFF" android:pathData="M38,48L54,66L70,48Z"/>
+          <path android:strokeColor="#FFFFFF" android:strokeWidth="7" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M35,64V76H73V64"/>
+          <path android:fillColor="#34D399" android:pathData="M76,32m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0"/>
+          </vector>
+          EOF_I
+          mkdir -p "$(dirname 'app/src/main/res/drawable/ic_bg.xml')"
+          cat > 'app/src/main/res/drawable/ic_bg.xml' <<'EOF_I'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+          <path android:fillColor="#111111" android:pathData="M0,0h108v108h-108z"/>
+          <path android:fillColor="#1F1F1F" android:pathData="M0,0h108v54h-108z"/>
+          </vector>
+          EOF_I
+          mkdir -p "$(dirname 'app/src/main/res/drawable/ic_mono.xml')"
+          cat > 'app/src/main/res/drawable/ic_mono.xml' <<'EOF_I'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+          <path android:fillColor="#FFFFFF" android:pathData="M50,28h8v26h-8z"/>
+          <path android:fillColor="#FFFFFF" android:pathData="M38,48L54,66L70,48Z"/>
+          <path android:strokeColor="#FFFFFF" android:strokeWidth="7" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M35,64V76H73V64"/>
+          <path android:fillColor="#FFFFFF" android:pathData="M76,32m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0"/>
+          </vector>
+          EOF_I
+          mkdir -p "$(dirname 'app/src/main/res/drawable/ic_launcher.xml')"
+          cat > 'app/src/main/res/drawable/ic_launcher.xml' <<'EOF_I'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="48dp" android:viewportWidth="108" android:viewportHeight="108">
+          <path android:fillColor="#111111" android:pathData="M24,6h60a18,18 0,0 1,18 18v60a18,18 0,0 1,-18 18h-60a18,18 0,0 1,-18 -18v-60a18,18 0,0 1,18 -18z"/>
+          <path android:fillColor="#FFFFFF" android:pathData="M50,28h8v26h-8z"/>
+          <path android:fillColor="#FFFFFF" android:pathData="M38,48L54,66L70,48Z"/>
+          <path android:strokeColor="#FFFFFF" android:strokeWidth="7" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M35,64V76H73V64"/>
+          <path android:fillColor="#34D399" android:pathData="M76,32m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0"/>
+          </vector>
+          EOF_I
+          mkdir -p "$(dirname 'app/src/main/res/drawable-anydpi-v26/ic_launcher.xml')"
+          cat > 'app/src/main/res/drawable-anydpi-v26/ic_launcher.xml' <<'EOF_I'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@drawable/ic_bg" />
+              <foreground android:drawable="@drawable/ic_fg" />
+              <monochrome android:drawable="@drawable/ic_mono" />
+          </adaptive-icon>
+          EOF_I
+          mkdir -p "$(dirname 'app/src/main/res/drawable/ic_stat.xml')"
+          cat > 'app/src/main/res/drawable/ic_stat.xml' <<'EOF_I'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="108" android:viewportHeight="108">
+          <path android:fillColor="#FFFFFF" android:pathData="M48,14h12v40h-12z"/>
+          <path android:fillColor="#FFFFFF" android:pathData="M30,46L54,74L78,46Z"/>
+          <path android:strokeColor="#FFFFFF" android:strokeWidth="10" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:pathData="M22,72V92H86V72"/>
+          </vector>
+          EOF_I
           mkdir -p "$(dirname 'app/src/main/java/com/vtn/uploader/MainActivity.java')"
           cat > 'app/src/main/java/com/vtn/uploader/MainActivity.java' <<'EOF_J'
           package com.vtn.uploader;
@@ -137,9 +189,9 @@ jobs:
               @Override
               protected void onCreate(Bundle b) {
                   super.onCreate(b);
-                  getWindow().setStatusBarColor(0xFFF3F5F9);
-                  if (Build.VERSION.SDK_INT >= 23) getWindow().getDecorView().setSystemUiVisibility(android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+                  bars(0xFFF6F6F4, true);
                   wv = new WebView(this);
+                  wv.setBackgroundColor(0x00000000);
                   WebSettings s = wv.getSettings();
                   s.setJavaScriptEnabled(true);
                   s.setDomStorageEnabled(true);
@@ -155,6 +207,17 @@ jobs:
                   }
               }
           
+              void bars(int c, boolean light) {
+                  getWindow().setStatusBarColor(c);
+                  getWindow().setNavigationBarColor(c);
+                  getWindow().getDecorView().setBackgroundColor(c);
+                  if (Build.VERSION.SDK_INT >= 23) {
+                      int f = light ? android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : 0;
+                      if (light && Build.VERSION.SDK_INT >= 26) f |= android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                      getWindow().getDecorView().setSystemUiVisibility(f);
+                  }
+              }
+
               void js(final String type, final String msg) {
                   runOnUiThread(new Runnable() { public void run() {
                       if (wv != null) wv.evaluateJavascript("window.onNative&&onNative(" + JSONObject.quote(type) + "," + JSONObject.quote(msg) + ")", null);
@@ -254,6 +317,13 @@ jobs:
           
               class Bridge {
                   @JavascriptInterface public boolean hasAccess() { return has(); }
+
+                  @JavascriptInterface
+                  public void setBars(final String hex, final boolean light) {
+                      runOnUiThread(new Runnable() { public void run() {
+                          try { bars(android.graphics.Color.parseColor(hex), light); } catch (Exception ignored) {}
+                      }});
+                  }
           
                   @JavascriptInterface
                   public void requestAccess() {
@@ -380,7 +450,7 @@ jobs:
                           if (pkg != null && pkg.length() > 0) target = getPackageManager().getLaunchIntentForPackage(pkg);
                           if (target == null) target = new Intent(MainActivity.this, MainActivity.class);
                           PendingIntent pi = PendingIntent.getActivity(MainActivity.this, 0, target, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-                          nb.setSmallIcon(android.R.drawable.stat_sys_download_done).setContentTitle(title).setContentText(text).setAutoCancel(true).setContentIntent(pi);
+                          nb.setSmallIcon(R.drawable.ic_stat).setContentTitle(title).setContentText(text).setAutoCancel(true).setContentIntent(pi);
                           nm.notify(1, nb.build());
                       } catch (Exception ignored) {}
                   }
@@ -391,85 +461,110 @@ jobs:
           cat > 'app/src/main/assets/index.html' <<'EOF_H'
           <!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
           <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-          <title>build 上传助手</title><style>
-          :root{--bg:#f3f5f9;--card:#fff;--tx:#111827;--mu:#6b7280;--ln:#e5e7eb;--b:#2563eb;--g:#16a34a;--r:#dc2626;--y:#d97706}
+          <title>build助手</title><style>
+          :root{--bg:#f6f6f4;--card:#fff;--tx:#111;--mu:#6b6b6b;--ln:#e7e7e4;--soft:#efefec;--ac:#111;--act:#fff;--g:#16a34a;--r:#dc2626}
+          @media(prefers-color-scheme:dark){:root{--bg:#0c0c0c;--card:#171717;--tx:#f2f2f2;--mu:#9a9a9a;--ln:#2a2a2a;--soft:#222;--ac:#f2f2f2;--act:#111;--g:#4ade80;--r:#f87171}}
           *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
           body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx);font-size:15px}
-          .w{max-width:1100px;margin:auto;padding:14px 18px 40px}
-          .top{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}
-          .top h1{font-size:20px;margin:0}.ver{font-size:13px;color:var(--mu)}
-          .grid{display:grid;grid-template-columns:1fr;gap:14px}
-          @media(min-width:820px){.grid{grid-template-columns:1.15fr .85fr}}
-          .c{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 1px 2px #0000000d}
-          .c h2{font-size:14px;color:var(--mu);font-weight:600;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center}
-          .steps{display:flex;gap:6px;margin:4px 0 14px}
+          .w{max-width:760px;margin:auto;padding:14px 18px 40px}
+          .top{display:flex;align-items:center;gap:12px;margin:6px 0 16px}.logo{width:40px;height:40px;flex:0 0 auto}
+          .top h1{font-size:20px;margin:0;flex:1}.top small{display:block;font-size:12px;color:var(--mu);font-weight:400;margin-top:2px}
+          .c{background:var(--card);border:1px solid var(--ln);border-radius:20px;padding:18px;margin-bottom:14px}
+          .c h2{font-size:13px;color:var(--mu);font-weight:600;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+          .hero{display:flex;gap:16px;align-items:center}
+          .ring{width:64px;height:64px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--ac) calc(var(--p,0)*1%),var(--soft) 0)}
+          .ring::after{content:attr(data-t);width:52px;height:52px;border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:13px;font-weight:700}
+          #st{font-size:21px;font-weight:700;margin:0 0 4px}#sub{font-size:13px;color:var(--mu);min-height:18px;word-break:break-all}
+          .steps{display:flex;gap:6px;margin:16px 0 2px}
           .sp{flex:1;text-align:center;font-size:12px;color:var(--mu)}
-          .sp i{display:block;height:6px;border-radius:3px;background:var(--ln);margin-bottom:6px}
-          .sp.on i{background:var(--b)}.sp.done i{background:var(--g)}.sp.bad i{background:var(--r)}
-          .sp.on{color:var(--b);font-weight:600}.sp.done{color:var(--g)}.sp.bad{color:var(--r);font-weight:600}
-          #st{font-size:20px;font-weight:700;margin:2px 0 4px}#sub{font-size:13px;color:var(--mu);min-height:18px}
-          .bar{height:8px;background:var(--ln);border-radius:4px;overflow:hidden;margin-top:10px;display:none}.bar b{display:block;height:100%;width:0;background:var(--b);transition:width .3s}
-          .file{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--ln);border-radius:12px;margin-top:14px}
-          .file .n{font-weight:600}.file .m{font-size:12px;color:var(--mu)}.file select{flex:1;min-width:0;border:0;font-size:15px;background:none;color:var(--tx)}
-          button{border:0;border-radius:12px;padding:11px 14px;font-size:15px;background:#eef0f4;color:var(--tx)}
-          button:active{opacity:.7}button:disabled{opacity:.45}
-          .main{width:100%;margin-top:12px;padding:15px;font-size:17px;font-weight:700;background:var(--b);color:#fff}
-          .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.acts button{background:#eff6ff;color:var(--b);font-size:14px;padding:9px 12px}
-          .acts button.pri{background:var(--g);color:#fff;font-weight:600}
-          .kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--ln);font-size:14px}.kv:last-child{border:0}
-          .kv span:first-child{color:var(--mu)}.kv span:last-child{text-align:right;max-width:65%;word-break:break-all}
-          .row{display:flex;gap:8px;margin-top:10px}.row>*{flex:1}
-          #log{background:#0f172a;color:#e2e8f0;border-radius:12px;padding:10px;font:12.5px/1.6 monospace;max-height:280px;overflow:auto;white-space:pre-wrap;margin-top:8px}
-          #log:empty::before{content:"暂无记录";color:#64748b}
-          .g{color:#4ade80}.r{color:#f87171}.y{color:#fbbf24}.d{color:#94a3b8}
-          label{display:block;font-size:13px;color:var(--mu);margin:10px 0 4px}
-          input[type=text],input[type=password],input[type=number],select.f{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;font-size:15px;background:#fff}
-          .chk{display:flex;align-items:center;gap:8px;color:var(--tx);font-size:14px;margin:12px 0 0}
-          .pill{font-size:12px;padding:2px 8px;border-radius:99px;font-weight:600}.ok{background:#dcfce7;color:#166534}.no{background:#fee2e2;color:#991b1b}
-          .warn{background:#fff7ed;border:1px solid #fdba74;display:none}
+          .sp i{display:block;height:4px;border-radius:2px;background:var(--ln);margin-bottom:6px;transition:background .3s}
+          .sp.on i{background:var(--ac)}.sp.on{color:var(--tx);font-weight:600}
+          .sp.done i{background:var(--g)}.sp.bad i{background:var(--r)}.sp.bad{color:var(--r);font-weight:600}
+          .bar{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-top:12px;display:none}.bar b{display:block;height:100%;width:0;background:var(--ac);transition:width .3s}
+          .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.acts:empty{display:none}
+          .acts button{background:var(--soft);font-size:14px;padding:9px 14px}.acts button.pri{background:var(--ac);color:var(--act);font-weight:600}
+          .tabs{display:flex;background:var(--soft);border-radius:14px;padding:4px;margin:0 0 14px;position:sticky;top:6px;z-index:5}
+          .tabs button{flex:1;background:none;padding:9px 0;border-radius:10px;font-size:14px;color:var(--mu)}
+          .tabs button.on{background:var(--card);color:var(--tx);font-weight:600;box-shadow:0 1px 3px #0000001a}
+          .pane{display:none;animation:up .25s ease}.pane.on{display:block}
+          @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+          @media(prefers-reduced-motion:reduce){.pane{animation:none}}
+          .file{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--soft);border-radius:14px}
+          .file select{width:100%;border:0;font-size:15px;font-weight:600;background:none;color:var(--tx);padding:0}
+          .m{font-size:12px;color:var(--mu);margin-top:3px}
+          button{border:0;border-radius:12px;padding:11px 14px;font-size:15px;background:var(--soft);color:var(--tx);font-family:inherit;transition:transform .12s,opacity .12s}
+          button:active{transform:scale(.97);opacity:.8}button:disabled{opacity:.4}
+          .main{width:100%;margin-top:12px;padding:15px;font-size:16px;font-weight:700;background:var(--ac);color:var(--act);border-radius:14px}
+          .kv{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--ln);font-size:14px}.kv:last-of-type{border:0}
+          .kv span:first-child{color:var(--mu);flex:0 0 auto}.kv span:last-child{text-align:right;word-break:break-all}
+          .row{display:flex;gap:8px;margin-top:12px}.row>*{flex:1}.row .pri{background:var(--ac);color:var(--act);font-weight:600}
+          #log{background:#0f0f0f;color:#e5e5e5;border-radius:12px;padding:10px 12px;font:12.5px/1.6 monospace;max-height:300px;overflow:auto;white-space:pre-wrap;margin-top:10px}
+          #log:empty::before{content:"暂无记录";color:#777}
+          .g{color:#4ade80}.r{color:#f87171}.y{color:#fbbf24}.d{color:#9ca3af}
+          label{display:block;font-size:13px;color:var(--mu);margin:12px 0 5px}
+          input[type=text],input[type=password],input[type=number],select.f{width:100%;padding:11px 12px;border:1px solid transparent;border-radius:12px;font-size:15px;background:var(--soft);color:var(--tx);outline:none}
+          input:focus,select.f:focus{border-color:var(--ac);background:var(--card)}
+          .chk{display:flex;align-items:center;gap:10px;color:var(--tx);font-size:14px;margin:14px 0 0}.chk input{width:18px;height:18px;accent-color:var(--ac)}
+          .pill{font-size:12px;padding:4px 10px;border-radius:99px;font-weight:600}.ok{background:#16a34a22;color:var(--g)}.no{background:#dc262622;color:var(--r)}
+          .warn{display:none;border-color:#f9731666;background:#f9731612}.warn button{background:#f97316;color:#fff;margin-top:10px}
           details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-marker{display:none}
-          .tl{font-size:13px;color:var(--b)}
+          .tl{font-size:12px;color:var(--mu);font-weight:400}details[open] .tl::after{content:"收起"}details:not([open]) .tl::after{content:"展开"}
+          @media(min-width:900px){.w{max-width:1040px}.wide{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.wide>.c{margin:0}}
           </style></head><body><div class="w">
-          <div class="top"><h1>build 上传助手</h1><span class="ver" id="tokpill"></span></div>
-          <div class="c warn" id="perm" style="margin-bottom:14px"><b>需要文件权限</b><div style="font-size:14px;margin:6px 0 10px">用于读取"下载"里的 build.yml，并把 APK 保存到 下载/VideoToNote。</div><button style="background:#f97316;color:#fff" onclick="App.requestAccess()">去开启</button></div>
-          <div class="grid"><div>
+          <div class="top"><svg viewBox="0 0 108 108" class="logo"><rect x="6" y="6" width="96" height="96" rx="22" fill="#111"/><path d="M50 28h8v26h-8z" fill="#fff"/><path d="M38 48L54 66L70 48Z" fill="#fff"/><path d="M35 64V76H73V64" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="76" cy="32" r="5" fill="#34d399"/></svg><h1>build助手<small>上传 build.yml · 编译 · 下载新版</small></h1><span id="tokpill"></span></div>
+          <div class="c warn" id="perm"><b>需要文件权限</b><div style="font-size:14px;margin-top:6px">用于读取"下载"里的 build.yml，并把 APK 保存到 下载/VideoToNote。</div><button onclick="App.requestAccess()">去开启</button></div>
           <div class="c">
-          <div class="steps"><div class="sp" id="s0"><i></i>上传</div><div class="sp" id="s1"><i></i>编译</div><div class="sp" id="s2"><i></i>下载</div><div class="sp" id="s3"><i></i>打开 DSH GO</div></div>
-          <div id="st">准备就绪</div><div id="sub">选好文件后点上传</div><div class="bar" id="bar"><b id="barb"></b></div>
-          <div class="file"><div style="flex:1;min-width:0"><select id="f"></select><div class="m" id="newest"></div></div><button onclick="loadFiles(true)">刷新</button></div>
-          <button class="main" id="go" onclick="act(run)">上传并编译</button>
+          <div class="hero"><div class="ring" id="ring" data-t="就绪"></div><div style="flex:1;min-width:0"><div id="st">准备就绪</div><div id="sub">选好文件后点上传</div></div></div>
+          <div class="bar" id="bar"><b id="barb"></b></div>
+          <div class="steps"><div class="sp" id="s0"><i></i>上传</div><div class="sp" id="s1"><i></i>编译</div><div class="sp" id="s2"><i></i>下载</div><div class="sp" id="s3"><i></i>DSH GO</div></div>
           <div class="acts" id="links"></div></div>
-          <div class="c" style="margin-top:14px"><details id="logbox"><summary><h2 style="margin:0">运行日志 <span class="tl">展开</span></h2></summary><div id="log"></div></details></div>
-          </div><div>
+          <div class="tabs" id="tabs"><button class="on" onclick="tab(0)">编译</button><button onclick="tab(1)">更新</button><button onclick="tab(2)">设置</button></div>
+          <div class="pane on" id="p0"><div class="wide">
+          <div class="c"><h2>要上传的文件 <button style="padding:6px 12px;font-size:13px" onclick="loadFiles(true)">刷新</button></h2>
+          <div class="file"><div style="flex:1;min-width:0"><select id="f"></select><div class="m" id="newest"></div></div></div>
+          <button class="main" id="go" onclick="act(run)">上传并编译</button></div>
+          <div class="c"><details id="logbox"><summary><h2 style="margin:0">运行日志 <span class="tl"></span></h2></summary><div id="log"></div></details></div>
+          </div></div>
+          <div class="pane" id="p1"><div class="wide">
           <div class="c"><h2>视频笔记</h2>
-          <div class="kv"><span>手机上</span><span id="iv">读取中…</span></div>
+          <div class="kv"><span>平板上</span><span id="iv">读取中…</span></div>
           <div class="kv"><span>线上最新</span><span id="lv">未检查</span></div>
           <div class="kv"><span>已下载</span><span id="dv">无</span></div>
-          <div class="row"><button onclick="act(checkLatest)">检查更新</button><button style="background:var(--g);color:#fff" onclick="act(downloadLatest)">下载最新版</button></div></div>
-          <div class="c" style="margin-top:14px"><h2>DSH GO</h2>
+          <div class="row"><button onclick="act(checkLatest)">检查更新</button><button class="pri" onclick="act(downloadLatest)">下载最新版</button></div></div>
+          <div class="c"><h2>安装器（DSH GO）</h2>
           <div class="kv"><span>目标应用</span><span id="dshv">未设置</span></div>
           <label>更换目标应用</label><select class="f" id="appsel"></select>
           <div class="row"><button onclick="openDsh(true)">现在打开</button></div></div>
-          <div class="c" style="margin-top:14px"><details><summary><h2 style="margin:0">设置 <span class="tl">展开</span></h2></summary>
-          <label>GitHub token（需 repo + workflow 写权限）</label><div class="row" style="margin-top:0"><input id="tok" type="password" placeholder="粘贴后点保存"><button style="flex:0 0 auto" onclick="saveTok()">保存</button></div>
+          </div></div>
+          <div class="pane" id="p2"><div class="wide">
+          <div class="c"><h2>GitHub</h2>
+          <label>Token（需 repo + workflow 写权限）</label><div class="row" style="margin-top:0"><input id="tok" type="password" placeholder="粘贴后点保存"><button style="flex:0 0 auto" onclick="saveTok()">保存</button></div>
           <label>仓库</label><input id="repo" type="text">
           <div class="row" style="margin-top:0"><div><label>分支</label><input id="br" type="text"></div><div><label>最长等待（分钟）</label><input id="to" type="number"></div></div>
-          <label>仓库内路径</label><input id="tg" type="text"><label>视频笔记包名</label><input id="pkg" type="text">
+          <label>仓库内路径</label><input id="tg" type="text"></div>
+          <div class="c"><h2>行为</h2>
+          <label>视频笔记包名</label><input id="pkg" type="text">
           <label class="chk"><input id="auto" type="checkbox">编译成功后自动下载并打开 DSH GO</label>
           <label class="chk"><input id="dry" type="checkbox">试运行（只检查，不提交）</label>
-          <button style="margin-top:12px;width:100%" onclick="saveOpt()">保存设置</button></details></div>
-          </div></div></div>
+          <button class="main" onclick="saveOpt()">保存设置</button></div>
+          </div></div>
+          </div>
           <script>
           const $=i=>document.getElementById(i),API="https://api.github.com",LS=localStorage;
           const DEF={repo:"jlynolson53-hue/VideoToNote-Lite",br:"main",tg:".github/workflows/build.yml",pkg:"com.vtn.lite",to:"25"};
           let busy=false,files=[],apps=[],dlWait=null;
           const kb=n=>(n/1024).toFixed(1)+" KB",sleep=ms=>new Promise(r=>setTimeout(r,ms)),p2=n=>String(n).padStart(2,"0");
           function fmt(t){const d=new Date(t);return p2(d.getMonth()+1)+"-"+p2(d.getDate())+" "+p2(d.getHours())+":"+p2(d.getMinutes())}
+          function tab(n){document.querySelectorAll("#tabs button").forEach((b,i)=>b.classList.toggle("on",i==n));for(let i=0;i<3;i++)$("p"+i).classList.toggle("on",i==n);LS.setItem("vtn_tab",n)}
+          function ring(){const on=document.querySelector(".sp.on"),done=document.querySelectorAll(".sp.done").length,r=$("ring"),bad=!!document.querySelector(".sp.bad");
+           r.style.setProperty("--p",done*25);r.dataset.t=bad?"失败":done>=4?"完成":on?(done+1)+"/4":"就绪"}
+          function theme(){const d=matchMedia("(prefers-color-scheme: dark)").matches;try{App.setBars(d?"#0c0c0c":"#f6f6f4",!d)}catch(e){}}
+          matchMedia("(prefers-color-scheme: dark)").addEventListener("change",theme);
           class Fail extends Error{}
-          function say(m,c){const d=document.createElement("div");d.className=c||"";d.textContent="["+new Date().toTimeString().slice(0,8)+"] "+m;$("log").appendChild(d);$("log").scrollTop=1e9;if(c=="r")$("logbox").open=true}
+          function say(m,c){const d=document.createElement("div");d.className=c||"";d.textContent="["+new Date().toTimeString().slice(0,8)+"] "+m;$("log").appendChild(d);$("log").scrollTop=1e9;if(c=="r"){$("logbox").open=true;tab(0)}}
           function st(t,sub){$("st").textContent=t;if(sub!==undefined)$("sub").textContent=sub}
-          function step(i,state){for(let k=0;k<4;k++){const e=$("s"+k);e.className="sp"+(k<i?" done":k==i?" "+(state||"on"):"")}}
-          function bar(p){$("bar").style.display=p==null?"none":"block";$("barb").style.width=(p<0?30:p)+"%"}
+          function step(i,state){for(let k=0;k<4;k++){const e=$("s"+k);e.className="sp"+(k<i?" done":k==i?" "+(state||"on"):"")}ring()}
+          function bar(p){$("bar").style.display=p==null?"none":"block";$("barb").style.width=(p<0?30:p)+"%";if(p!=null&&p>=0)$("ring").dataset.t=p+"%"}
           function btn(t,fn,pri){const b=document.createElement("button");b.textContent=t;if(pri)b.className="pri";b.onclick=fn;$("links").appendChild(b)}
           function link(t,u){btn(t,()=>App.openUrl(u))}
           function showTok(){const t=LS.getItem("vtn_tok");$("tokpill").innerHTML=t?'<span class="pill ok">已授权</span>':'<span class="pill no">未设置 token</span>'}
@@ -567,7 +662,7 @@ jobs:
               return}
              step(1,"bad");st("编译失败",rn.conclusion);link("失败日志",rn.html_url);App.notify("编译失败","打开查看日志","");return}}
            st("等待超时","可到 Actions 页面看进度");link("Actions 页面","https://github.com/"+R+"/actions")}
-          loadOpt();showTok();loadFiles(false);showInst();loadApps();
+          theme();tab(+LS.getItem("vtn_tab")||0);loadOpt();showTok();loadFiles(false);showInst();loadApps();
           </script></body></html>
           EOF_H
 
@@ -599,4 +694,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_NO: ${{ github.run_number }}
         run: |
-          gh release create "uploader-1.0.$RUN_NO" BuildUploader.apk --prerelease --title "build上传助手 1.0.$RUN_NO" --notes "build上传助手自动构建（预发布，不影响视频笔记的 latest）"
+          gh release create "uploader-1.0.$RUN_NO" BuildUploader.apk --prerelease --title "build助手 1.0.$RUN_NO" --notes "build助手自动构建（新图标与新界面）（预发布，不影响视频笔记的 latest）"
