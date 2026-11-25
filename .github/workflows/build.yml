@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 68
-                  versionName "2.2.2"
+                  versionCode 69
+                  versionName "2.3.0"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -3913,8 +3913,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.2.2";
+          const APP_VER = "2.3.0";
           const CHANGELOG = [
+            ["2.3.0", "生成进度改为细胞周期圆环（黑白灰）：G1 解析 → S 期复制（取字幕/转写，按真实百分比推进）→ G2 检查点（截图/识图）→ M 期分裂（写笔记/汇总），完成时一个细胞变两个；暂停显示“已阻断”；三个数字卡片缩成一行小字"],
             ["2.2.2", "本地视频进度条重做：转写时停在“转写”步骤（不再误跳到“识图”），总进度按转写百分比增长，增加细进度条和预计剩余时间"],
             ["2.2.1", "修复选了本地视频后点“生成笔记”提示“请先粘贴视频链接”：选中后输入框自动填入本地视频名并锁定"],
             ["2.2.0", "支持本地视频：生成页可选择本地视频；优先用视频内嵌字幕，也可选外挂字幕（srt/vtt/ass）；都没有时用本机离线语音转写（SenseVoice + Silero VAD，不耗额度，需先导入模型文件）；本地视频也能自动截图"],
@@ -5582,6 +5583,65 @@ jobs:
               const a = e.target.closest && e.target.closest("#preview a.ts,#preview .shot figcaption.tsj"); if (!a) return;
               try { if (current && current.bvid && /^LV/.test(current.bvid)) { e.preventDefault(); e.stopPropagation(); snack("本地视频的时间跳转下个版本支持"); } } catch (x) {}
             }, true);
+          })();
+          // v2.3.0：细胞周期进度环（黑白灰）、统计缩成一行
+          (function () {
+            if (typeof pvDraw !== "function" || !$("progCard")) return;
+            const st = document.createElement("style");
+            st.textContent =
+              "#pvFlow{display:flex!important;justify-content:space-between;gap:4px;margin:6px 0 0!important}#pvFlow .pvS{font-size:12px!important;color:var(--on-surface-variant)!important;flex:1;text-align:center}#pvFlow .pvS i{display:none!important}#pvFlow .pvS.cur{color:var(--on-surface)!important;font-weight:700;animation:none!important}#pvFlow .pvS.done{opacity:.55}" +
+              ".pvStats{display:none!important}#pvBar{display:none!important}#pvLine{font-size:13px;color:var(--on-surface-variant);text-align:center;margin:4px 0 8px;font-variant-numeric:tabular-nums}" +
+              "#ccBox{display:flex;justify-content:center;margin:6px 0 0}#ccBox svg{width:230px;height:230px;color:var(--on-surface)}" +
+              "#ccBox .trk{stroke:var(--fn-line);stroke-width:14;fill:none}#ccBox .arc{stroke:currentColor;stroke-width:14;fill:none;stroke-linecap:butt;transition:stroke-dashoffset .6s ease}" +
+              "#ccBox .sep{stroke:var(--surface,#fff);stroke-width:3}#ccBox .lb{font-size:11px;fill:var(--on-surface-variant);text-anchor:middle}#ccBox .lb.on{fill:currentColor;font-weight:700}" +
+              "#ccBox .ph{font-size:17px;font-weight:800;fill:currentColor;text-anchor:middle}#ccBox .sub{font-size:11px;fill:var(--on-surface-variant);text-anchor:middle}#ccBox .pc{font-size:26px;font-weight:800;fill:currentColor;text-anchor:middle;font-variant-numeric:tabular-nums}" +
+              "#ccBox .cell{fill:var(--surface,#fff);stroke:currentColor;stroke-width:2.5}#ccBox .nuc{fill:#888}" +
+              "@media (prefers-reduced-motion:no-preference){#ccBox .live{animation:ccB 1.6s ease-in-out infinite}@keyframes ccB{50%{opacity:.45}}#ccBox .dna{animation:ccD 2.4s linear infinite}@keyframes ccD{to{stroke-dashoffset:-24}}}";
+            document.head.appendChild(st);
+            const box = document.createElement("div"); box.id = "ccBox";
+            const line = document.createElement("div"); line.id = "pvLine";
+            $("pvFlow").before(box); $("pvFlow").after(line);
+            const R = 92, C = 2 * Math.PI * R, CX = 115, CY = 115;
+            // 各相在圆环上的占比（起点在 12 点方向，顺时针）
+            const PH = [["G1", 0, .15, "解析视频"], ["S", .15, .5, "复制中 · 取字幕/转写"], ["G2", .5, .65, "检查点 · 截图/识图"], ["M", .65, 1, "分裂中 · 写笔记/汇总"]];
+            let best = 0;
+            const pt = (f, r) => { const a = f * 2 * Math.PI - Math.PI / 2; return [CX + r * Math.cos(a), CY + r * Math.sin(a)]; };
+            function frac() {
+              const g = PV.stage, ai = PV.aiTotal ? Math.min(1, PV.aiDone / PV.aiTotal) : 0;
+              if (g >= 6) return 1;
+              if (g === 0) return .07;
+              if (g === 1) return .15 + .35 * Math.min(1, PV.sub || 0);
+              if (g === 2) return .54;
+              if (g === 3) return .58 + .07 * ai;
+              if (g === 4) return .65 + .28 * ai;
+              return .93 + .06 * ai;
+            }
+            const _d = pvDraw;
+            pvDraw = function () {
+              _d.apply(this, arguments);
+              try {
+                let f = frac(); if (PV.stage === 0 && best > .2) best = 0; best = Math.max(best, f); f = best;
+                if (PV.stage === 0 && !PV.done) best = f;
+                const ph = PH.find(x => f < x[2]) || PH[3], done = PV.stage >= 6;
+                let sep = "", lbs = "";
+                PH.forEach(x => { const a = pt(x[1], R - 9), b = pt(x[1], R + 9); sep += '<line class="sep" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>';
+                  const m = pt((x[1] + x[2]) / 2, R + 17); lbs += '<text class="lb' + (x === ph && !done ? " on" : "") + '" x="' + m[0] + '" y="' + (m[1] + 4) + '">' + x[0] + "</text>"; });
+                const c = pt(f, R);
+                let mid;
+                const pct = Math.round(f * 100);
+                if (done) mid = '<g transform="translate(' + CX + "," + (CY - 6) + ')"><ellipse class="cell" cx="-20" cy="0" rx="17" ry="14"/><circle class="nuc" cx="-20" cy="0" r="5"/><ellipse class="cell" cx="20" cy="0" rx="17" ry="14"/><circle class="nuc" cx="20" cy="0" r="5"/></g><text class="ph" x="' + CX + '" y="' + (CY + 34) + '">分裂完成</text><text class="sub" x="' + CX + '" y="' + (CY + 50) + '">一个变两个 · 笔记已生成</text>';
+                else if (ph[0] === "S") mid = '<path class="dna" d="M' + (CX - 30) + " " + (CY - 26) + " q15 10 30 0 t30 0 M" + (CX - 30) + " " + (CY - 16) + ' q15 -10 30 0 t30 0" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="6 6"/><text class="pc" x="' + CX + '" y="' + (CY + 14) + '">' + pct + '%</text><text class="ph" x="' + CX + '" y="' + (CY + 36) + '" style="font-size:14px">S 期</text><text class="sub" x="' + CX + '" y="' + (CY + 52) + '">' + ph[3] + "</text>";
+                else mid = '<text class="pc" x="' + CX + '" y="' + (CY + 2) + '">' + pct + '%</text><text class="ph" x="' + CX + '" y="' + (CY + 26) + '" style="font-size:14px">' + ph[0] + ' 期</text><text class="sub" x="' + CX + '" y="' + (CY + 42) + '">' + ph[3] + "</text>";
+                if (PV.paused && !done) mid = '<text class="ph" x="' + CX + '" y="' + (CY - 2) + '">已阻断</text><text class="sub" x="' + CX + '" y="' + (CY + 16) + '">加入阻断剂，停在 ' + ph[0] + ' 期</text><text class="sub" x="' + CX + '" y="' + (CY + 32) + '">点“继续”洗去阻断剂</text>';
+                box.innerHTML = '<svg viewBox="0 0 230 230"><circle class="trk" cx="' + CX + '" cy="' + CY + '" r="' + R + '"/><circle class="arc" cx="' + CX + '" cy="' + CY + '" r="' + R + '" transform="rotate(-90 ' + CX + " " + CY + ')" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - f)) + '"/>' + sep + lbs +
+                  (done ? "" : '<g class="' + (PV.paused ? "" : "live") + '"><circle class="cell" cx="' + c[0] + '" cy="' + c[1] + '" r="10"/><circle class="nuc" cx="' + c[0] + '" cy="' + c[1] + '" r="3.5"/></g>') + mid + "</svg>";
+                line.textContent = "已完成请求 " + (PV.done || 0) + " · 进行中 " + (PV.run || 0) + " · 总进度 " + pct + "%";
+                $("pvPct").textContent = pct + "%";
+              } catch (e) {}
+            };
+            const _r = typeof pvReset === "function" ? pvReset : null;
+            if (_r) pvReset = function () { best = 0; return _r.apply(this, arguments); };
+            try { pvDraw(); } catch (e) {}
           })();
           iconFallback();
           </script>
