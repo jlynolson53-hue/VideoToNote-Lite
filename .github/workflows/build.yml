@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 77
-                  versionName "2.5.5"
+                  versionCode 78
+                  versionName "2.6.0"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -2417,6 +2417,30 @@ jobs:
           .prew pre{padding-right:44px!important}
           .rpl{position:absolute;border-radius:50%;background:currentColor;opacity:.18;transform:scale(0);animation:rp .45s ease-out forwards;pointer-events:none}
           @keyframes rp{to{transform:scale(1);opacity:0}}
+
+          /* v2.6.0 视觉重做：参考 Awwwards / Land-book / Siteinspire / Lapa / Landing.love / One Page Love / 21st 的编辑风极简 */
+          :root{--background:#f4f2ee;--surface:#fbfaf8;--surface-container-low:#fbfaf8;--surface-container:#efece6;--surface-container-high:#e7e3dc;--on-surface:#141414;--on-surface-variant:#6b6862;--outline:#a8a49c;--outline-variant:rgba(20,20,20,.10);--secondary-container:#e9e5de;--on-secondary-container:#141414}
+          :root[data-theme=dark]{--background:#0e0e0e;--surface:#161616;--surface-container-low:#161616;--surface-container:#1d1d1d;--surface-container-high:#262626;--on-surface:#ededeb;--on-surface-variant:#8f8d88;--outline:#555;--outline-variant:rgba(255,255,255,.09);--secondary-container:#232323;--on-secondary-container:#ededeb;--on-primary:#0e0e0e}
+          html,body{font-feature-settings:"tnum" 0;-webkit-font-smoothing:antialiased;letter-spacing:.01em}
+          .wrap{max-width:1080px;padding:0 20px}
+          h1.hd{font-size:clamp(34px,6vw,56px);line-height:1.05;font-weight:600;letter-spacing:-.03em;margin:36px 0 24px}
+          h2{font-size:24px;font-weight:600;letter-spacing:-.02em}
+          label{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--on-surface-variant);margin-top:14px}
+          input,textarea,select{border:1px solid var(--outline-variant);border-radius:14px;background:var(--surface);transition:border-color .2s,box-shadow .2s}
+          input:focus,textarea:focus,select:focus{border:1px solid var(--on-surface);padding:14px 16px;box-shadow:0 0 0 4px rgba(128,128,128,.12)}
+          button{border-radius:999px;transition:transform .15s,background .2s,opacity .2s;box-shadow:none}
+          button:active{transform:scale(.97)}
+          button.sec,button.ghost{background:transparent;border:1px solid var(--outline-variant);color:var(--on-surface)}
+          .card,.item,details{background:var(--surface)!important;border:1px solid var(--outline-variant)!important;border-radius:22px!important;box-shadow:none!important}
+          .item{transition:transform .2s,border-color .2s}.item:active{transform:scale(.99)}
+          .mute{color:var(--on-surface-variant);font-size:13px}
+          #tagBar button,#tagBar .chip,.chip{border-radius:999px;border:1px solid var(--outline-variant);background:transparent;color:var(--on-surface);font-size:13px;padding:6px 14px;min-height:34px}
+          #tagBar .on,#tagBar button.on,.chip.on{background:var(--on-surface);color:var(--background);border-color:var(--on-surface)}
+          .vSheet{border-radius:28px 28px 0 0;border:1px solid var(--outline-variant);box-shadow:0 -20px 60px -20px rgba(0,0,0,.25)}
+          .vDlg{border-radius:24px!important;border:1px solid var(--outline-variant)}
+          .vDlg .bb{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+          hr{border:0;border-top:1px solid var(--outline-variant)}
+          ::selection{background:var(--on-surface);color:var(--background)}
           </style>
           <script>
           (function(){var m=localStorage.getItem("vtn_theme")||"auto";var d=m==="dark"||(m==="auto"&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";})();
@@ -2797,6 +2821,7 @@ jobs:
             if (opts && opts.trunc && ch.finish_reason === "length") throw Object.assign(new Error("输出被截断"), { trunc: true });
             return ch.message.content;
           }
+          window.__chat = chat;
           const STYLE = {
             study: "写成教辅书（方法册）风格的讲义，适用于任何学科，严格遵守：①层级——一级标题用视频原标题；开头写【内容提要】，用 1. 2. 3. 概括本课讲的几种方法或知识块；正文按“方法/题型”分类，二级标题写“类型Ⅰ：××法”或“一、××”（沿用老师或课件的分块和叫法），不要按例题平铺分节；概念课则按知识块分节。②每个类型开头写【方法】，用 ①②③ 写出适用条件和操作步骤，核心公式或结论单独成行。③例题——沿用课件编号写【例N】，题干原样照录（保留小问编号、选项、填空横线 ______），有来源时在括号里注明（如 2023·全国乙卷）；之后依次是【图N】→【解析】→【答案】（单独成行并加粗，每个小问都要有答案，视频没给出就写“视频未给出”）；老师在题后做的方法提炼写成【反思】；老师讲的同类延伸题写成【变式N】。④只有老师讲了两种方法时才写两种解法，先写快法；不要自己补充解法或题目，确需补充时标注【补充】。⑤对比多个对象、多个阶段或多种情形时用表格；关键结论前加 ★；老师的口诀、应试提醒保留原话。⑥用讲义口吻（可用“同学们”），以连贯段落为主，少用无序列表；不要写“作者强调”“视频中提到”。⑦结尾写【总结】（本课方法如何选择）和“易错点”；若视频有练习题，按【强化训练】列出，题号后括号注明来源，答案集中放在最后。⑧禁止编造：字幕和截图都没有的数值、条件、结论一律不写，图中没标出的写“图中未标出”。",
             brief: "写成简要摘要：先用3-5句话概括全片，再列出最多8条关键要点。",
@@ -2951,7 +2976,7 @@ jobs:
                 md += "\n\n---\n来源：https://www.bilibili.com/video/" + v.bvid + "?p=" + v.p + "\n";
               }
               const item = { title: v.title, bvid: v.bvid, p: v.p, md, srt, kind: subOnly ? "sub" : "note", time: Date.now() };
-              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
+              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); try { if (!item.tag && item.kind !== "sub" && window.__autoTag) window.__autoTag(item); } catch (e) {} show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
               log("完成！", "o");
             } catch (e) {
               log("出错了：" + e.message, "e");
@@ -3341,7 +3366,7 @@ jobs:
                 md += "\n\n---\n来源：https://www.bilibili.com/video/" + v.bvid + "?p=" + v.p + "\n";
               }
               const item = { title: v.title, bvid: v.bvid, p: v.p, md, srt, kind: subOnly ? "sub" : "note", time: Date.now(), imgs: frames.map(f => f.name) };
-              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
+              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); try { if (!item.tag && item.kind !== "sub" && window.__autoTag) window.__autoTag(item); } catch (e) {} show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
               log("完成！", "o");
             } catch (e) {
               log("出错了：" + e.message, "e");
@@ -3509,7 +3534,7 @@ jobs:
                   calls: CAP, vers: [{ md, note: "首次生成", time }], cur: 0
                 });
               }
-              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
+              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); try { if (!item.tag && item.kind !== "sub" && window.__autoTag) window.__autoTag(item); } catch (e) {} show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
               log("完成！", "o");
             } catch (e) {
               log("出错了：" + e.message, "e");
@@ -3595,7 +3620,7 @@ jobs:
                   calls: CAP, vers: [{ md, note: "首次生成", time }], cur: 0
                 });
               }
-              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
+              try { const gt = window.__genTag && window.__genTag(); if (gt && !item.tag) item.tag = gt; } catch (e) {} saveHist(item); try { if (!item.tag && item.kind !== "sub" && window.__autoTag) window.__autoTag(item); } catch (e) {} show(item); try { window.__doneNotify && window.__doneNotify(item); } catch (e) {}
               if (HAS_NATIVE) Native.taskDel(st.id);
               log("完成！", "o");
             } catch (e) {
@@ -3931,9 +3956,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.5.5";
+          const APP_VER = "2.6.0";
           const CHANGELOG = [
-            ["2.5.5", "修复导出 PDF 预览右侧被裁掉一截（按实际宽度重新缩放，布局稳定后再校准一次）；导出完成后“打开”默认用荣耀文档，新增“分享”按钮可发给其他应用"],
+            ["2.6.0", "笔记生成后自动判断分类（优先归入已有分类，没有合适的会新建 2~4 字分类，长按可改）；整个应用视觉重做：参考 Awwwards、Land-book、Siteinspire 等设计站，改为暖白纸色底、细线边框、大号紧排标题、小号字母间距标签、圆角卡片、黑白描边按钮，深色模式同步调整"],\n            ["2.5.5", "修复导出 PDF 预览右侧被裁掉一截（按实际宽度重新缩放，布局稳定后再校准一次）；导出完成后“打开”默认用荣耀文档，新增“分享”按钮可发给其他应用"],
             ["2.5.4", "导出 PDF 面板重新设计（参考 Awwwards、Land-book 等设计站的极简风格）：分组标题改为小号字母间距标签、分段按钮加高圆角并加按压反馈、按钮文字不再折行（“很宽（留批注）”改为“很宽”）；预览像一张真纸带柔和阴影，平板上预览区加浅色底板；取消/导出按钮固定在底部，翻到哪都能点"],
             ["2.5.3", "导出 PDF 面板加入实时预览：直接显示当前笔记第 1 页的真实排版，改字号、行距、段落间距、公式大小、字体、分栏、页边距、截图、页码、标题栏时立刻更新；平板横屏时预览在左、设置在右；修复“公式大小”在面板里看不出区别（原示例文字里没有公式）"],
             ["2.5.2", "元素周期表进度加入元素卡片：点亮到高中常考元素时显示一条重点化学方程式（如 Na 与水、实验室制氯气、银镜反应），其他元素显示一条小常识（如氦先在太阳上被发现、铯原子钟定义秒）；共 55 种元素有内容，每条至少停留约 3 秒，进度跳得快也来得及看"],
@@ -4514,6 +4539,19 @@ jobs:
                 inp.onkeydown = e => { if (e.key === "Enter") p.querySelector('[data-a="ok"]').click(); };
               });
             }
+            window.__autoTag = async function (it) {
+              if (localStorage.getItem("vtn_autotag") === "0" || !window.__chat) return;
+              try {
+                const tags = allTags();
+                const body = String(it.md || "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").slice(0, 1500);
+                const r = await window.__chat([{ role: "system", content: "你是笔记分类助手。根据视频标题和笔记开头判断它属于哪个分类。优先从已有分类里选一个；都不合适时给一个新的 2~4 字分类（按学科或主题，如 物理、化学、英语阅读、作文、数学导数、生活）。只输出分类名，不要任何解释或标点。" }, { role: "user", content: "已有分类：" + (tags.join("、") || "无") + "\n标题：" + (it.title || "") + "\n笔记开头：\n" + body }]);
+                let t = String(r || "").trim().split(/\s|\n/)[0].replace(/["'“”「」【】\[\]。，,.:：]/g, "").slice(0, 8);
+                if (!t) return;
+                const hit = tags.find(x => x === t || t.includes(x) || x.includes(t)); if (hit) t = hit;
+                const h = loadHist(), x = h.find(y => y.time === it.time); if (!x || x.tag) return;
+                if (saveTag(it.time, t)) { it.tag = t; drawBar(); drawHist(); snack("已自动归入「" + t + "」，长按笔记可改"); }
+              } catch (e) {}
+            };
             window.__setTag = async function (it) {
               const t = await pickTag(it.tag || "", "《" + String(it.title || "").slice(0, 20) + "》的分类");
               if (t === null || t === (it.tag || "")) return;
