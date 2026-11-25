@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 74
-                  versionName "2.5.2"
+                  versionCode 76
+                  versionName "2.5.4"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -3913,9 +3913,11 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.5.2";
+          const APP_VER = "2.5.4";
           const CHANGELOG = [
-            ["2.5.2", "元素周期表进度加入元素卡片：点亮到高中常考元素时显示一条重点化学方程式（如 Na 与水、实验室制氯气、银镜反应），其他元素显示一条小常识（如氦先在太阳上被发现、铯原子钟定义秒）；共 57 种元素有内容，每条至少停留约 3 秒，进度跳得快也来得及看"],
+            ["2.5.4", "导出 PDF 面板重新设计（参考 Awwwards、Land-book 等设计站的极简风格）：分组标题改为小号字母间距标签、分段按钮加高圆角并加按压反馈、按钮文字不再折行（“很宽（留批注）”改为“很宽”）；预览像一张真纸带柔和阴影，平板上预览区加浅色底板；取消/导出按钮固定在底部，翻到哪都能点"],
+            ["2.5.3", "导出 PDF 面板加入实时预览：直接显示当前笔记第 1 页的真实排版，改字号、行距、段落间距、公式大小、字体、分栏、页边距、截图、页码、标题栏时立刻更新；平板横屏时预览在左、设置在右；修复“公式大小”在面板里看不出区别（原示例文字里没有公式）"],
+            ["2.5.2", "元素周期表进度加入元素卡片：点亮到高中常考元素时显示一条重点化学方程式（如 Na 与水、实验室制氯气、银镜反应），其他元素显示一条小常识（如氦先在太阳上被发现、铯原子钟定义秒）；共 55 种元素有内容，每条至少停留约 3 秒，进度跳得快也来得及看"],
             ["2.5.1", "元素周期表进度改进：当前元素显示所在周期和族，常见元素附高考常用相对原子质量（如 Cl 35.5、Fe 56），104 号起标注“人工合成元素”；下方加类别图例并实时统计已点亮的金属、非金属等数量；手机竖屏时未点亮的格子只留色块、不显示看不清的小字；系统开启“减少动画”时自动关掉闪烁和弹跳"],
             ["2.5.0", "生成进度改为逐个点亮元素周期表：进度越高点亮的元素越多（1 号氢到 118 号鿫），按元素类别上色，当前元素发光并显示符号、中文名、类别；暂停时光晕停止，完成时整表闪过一道光波；原有步骤圆点和数字卡片保留"],
             ["2.4.0", "PDF 导出设置增强：字号改为滑块（8–16 磅，0.5 磅微调）并实时预览；新增行距、段落间距、公式大小；页边距增加“宽（留批注）”；可关闭页码、标题栏、双栏分隔线；一键恢复默认"],
@@ -5083,7 +5085,23 @@ jobs:
           (function () {
             const st = document.createElement("style"); st.textContent = ".pdfS .seg{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}.pdfS .lb{font-size:13px;color:var(--on-surface-variant);margin-top:4px}.pdfS .seg .chip5{flex:1;justify-content:center;min-width:72px;color:var(--on-surface,#1c1c1e);background:transparent}.pdfS .seg .chip5.on{background:#111111!important;color:#fff!important;border-color:#111111!important;font-weight:600}.pdfS .seg .chip5.on::before{color:#fff}.pdfS .pvw{display:flex;justify-content:center;margin:4px 0 12px}.pdfS .pg{width:120px;height:170px;background:#fff;border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:12px 10px;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;transition:all .3s}.pdfS .pg .hd{height:9px;width:70%;background:#333;border-radius:2px;margin-bottom:4px}.pdfS .pg .bd{flex:1;display:flex;gap:7px}.pdfS .pg .cl{flex:1;display:flex;flex-direction:column;gap:4px}.pdfS .pg .cl i{display:block;height:3px;background:#bbb;border-radius:2px}.pdfS .pg .cl i.im{height:22px;background:#e5e5e5}.pdfS .pg.one .cl+.cl{display:none}.pdfS .pg.two .cl+.cl{border-left:1px solid #ddd;padding-left:6px}.pdfS .pg.noimg i.im{display:none}@media print{#v5print.pp{color:#222;line-height:1.62;font-family:'Noto Serif CJK SC','Source Han Serif SC','Songti SC',serif}#v5print.pp .ptl{column-span:all;border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}#v5print.pp .ptl b{display:block;font-size:1.55em;line-height:1.3;font-family:sans-serif}#v5print.pp .ptl span{font-size:.8em;color:#666}#v5print.pp.c2 .pbd{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb}#v5print.pp .pbd>h1:first-child{display:none}#v5print.pp h1{column-span:all;font-size:1.35em;margin:12pt 0 6pt}#v5print.pp h2{font-size:1.18em;margin:10pt 0 4pt;padding-left:5pt;border-left:3pt solid #111111}#v5print.pp h3{font-size:1.05em;margin:8pt 0 3pt}#v5print.pp h1,#v5print.pp h2,#v5print.pp h3{break-after:avoid;page-break-after:avoid}#v5print.pp p,#v5print.pp li{orphans:2;widows:2;margin:3pt 0}#v5print.pp img,#v5print.pp figure,#v5print.pp table,#v5print.pp pre,#v5print.pp blockquote,#v5print.pp .katex-display,#v5print.pp .shot{break-inside:avoid;page-break-inside:avoid}#v5print.pp img{max-width:100%;height:auto;border-radius:3pt}#v5print.pp .katex-display{overflow:hidden;margin:5pt 0}#v5print.pp.c2 .katex-display{font-size:.9em}#v5print.pp pre{white-space:pre-wrap;word-break:break-all;font-size:.85em}#v5print.pp table{font-size:.88em;width:100%;border-collapse:collapse}#v5print.pp blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}#v5print.pp.noimg img,#v5print.pp.noimg figure,#v5print.pp.noimg .shot{display:none!important}}"; document.head.appendChild(st);
             const pst = document.createElement("style"); document.head.appendChild(pst);
-            const sst = document.createElement("style"); sst.textContent = ".vSheet.pdfS{max-height:90vh;overflow-y:auto}.pdfS .fsr{display:flex;align-items:center;gap:8px}.pdfS .fsr input{flex:1}.pdfS .fsv{font-weight:600;margin-left:6px}.pdfS .smp{margin:8px 0 4px;padding:8px 10px;border:1px solid rgba(128,128,128,.35);border-radius:10px}"; document.head.appendChild(sst);
+            const sst = document.createElement("style"); sst.textContent = ".vSheet.pdfS{max-height:90vh;overflow-y:auto}.pdfS .fsr{display:flex;align-items:center;gap:8px}.pdfS .fsr input{flex:1}.pdfS .fsv{font-weight:600;margin-left:6px}.pdfS .smp{display:none;margin:8px 0 4px;padding:8px 10px;border:1px solid rgba(128,128,128,.35);border-radius:10px}"; sst.textContent +=
+              ".pdfS .lpv{margin:4px 0 10px}.pdfS .lpvT{font-size:12px;opacity:.7;margin-bottom:6px}.pdfS .lpvF{position:relative;overflow:hidden;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.25);background:#fff}" +
+              ".lpv .pgx{position:absolute;left:0;top:0;width:794px;height:1123px;box-sizing:border-box;transform-origin:0 0;background:#fff;color:#222;overflow:hidden;text-align:start}" +
+              ".lpv .pgx .ptl{border-bottom:1.2pt solid #333;padding-bottom:6pt;margin-bottom:10pt}.lpv .pgx .ptl b{display:block;font-size:1.6em;line-height:1.3;font-family:sans-serif}.lpv .pgx .ptl span{font-size:.8em;color:#666}" +
+              ".lpv .pbd.c2{column-count:2;column-gap:7mm;column-rule:.4pt solid #bbb;column-fill:auto;height:calc(100% - 60px)}.lpv .pbd>h1:first-child{display:none}" +
+              ".lpv h1{font-size:1.35em;margin:12pt 0 6pt;font-family:sans-serif}.lpv h2{font-size:1.16em;margin:10pt 0 4pt;padding-left:5pt;border-left:3pt solid #111;font-family:sans-serif}.lpv h3{font-size:1.04em;margin:8pt 0 3pt;font-family:sans-serif}" +
+              ".lpv ul,.lpv ol{padding-left:1.4em;margin:3pt 0}.lpv img{max-width:100%;height:auto;display:block;margin:4pt auto;border-radius:3pt}.lpv .shot{margin:5pt 0}.lpv .shot figcaption{font-size:.8em;color:#777;text-align:center}" +
+              ".lpv .katex-display{margin:5pt 0;overflow:hidden}.lpv .c2 .katex-display{font-size:.88em}.lpv table{font-size:.86em;width:100%;border-collapse:collapse;table-layout:fixed}.lpv th,.lpv td{border:.5pt solid #999;padding:3pt 4pt;vertical-align:top}.lpv th{background:#eee}" +
+              ".lpv blockquote{margin:5pt 0;padding:4pt 8pt;border-left:2pt solid #999;background:#f5f5f5}.lpv .pgx *{color:inherit}.lpv .pno{position:absolute;left:0;right:0;text-align:center;font:8.5pt sans-serif;color:#888}" +
+              "@media (min-width:900px){.vSheet.pdfS{width:min(1240px,94vw);max-width:none;display:grid;grid-template-columns:minmax(300px,42%) 1fr;column-gap:24px;align-content:start}.vSheet.pdfS>*{grid-column:2}.vSheet.pdfS>.lpv{grid-column:1;grid-row:1/span 60;position:sticky;top:0;align-self:start}}";
+            sst.textContent += ".vSheet.pdfS{border-radius:28px;padding-bottom:0}.vSheet.pdfS .lb{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.55;margin:14px 0 6px}" +
+              ".vSheet.pdfS .seg{border-radius:14px;padding:3px;gap:2px}.vSheet.pdfS .seg .chip5{min-height:40px;border-radius:11px;font-size:14px;white-space:nowrap;transition:background .2s,color .2s,transform .15s}.vSheet.pdfS .seg .chip5:active{transform:scale(.96)}" +
+              ".vSheet.pdfS .acts{position:sticky;bottom:0;margin:16px -24px 0;padding:12px 24px 16px;background:inherit;border-top:1px solid rgba(128,128,128,.18);backdrop-filter:blur(12px);z-index:3}" +
+              ".pdfS .lpvF{border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 12px 32px -8px rgba(0,0,0,.35);transition:height .25s}.pdfS .lpvT{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}" +
+              ".lpv .pgx{transition:padding .25s}.lpv .pgx .pbd{transition:font-size .2s}" +
+              "@media (min-width:900px){.vSheet.pdfS>.lpv{padding:18px;border-radius:20px;background:rgba(128,128,128,.10)}}";
+            document.head.appendChild(sst);
             const D = { col: "2", fs: "m", fsn: "", lh: "n", ps: "n", ms: "n", img: "1", mg: "n", ff: "song", pn: "1", hd: "1", cr: "1" };
             const opt = () => { try { return Object.assign({}, D, JSON.parse(localStorage.getItem("vtn_pdf") || "{}")); } catch (e) { return Object.assign({}, D); } };
             const FS = { s: "10pt", m: "11.5pt", l: "13pt" }, MG = { n: "16mm 14mm 16mm 14mm", w: "10mm 9mm 12mm 9mm", x: "22mm 20mm 22mm 20mm" };
@@ -5100,7 +5118,7 @@ jobs:
                 '<div class="lb">排版</div><div class="seg" data-k="col"><button class="chip5" data-v="1">单栏</button><button class="chip5" data-v="2">双栏（教材式）</button></div>' +
                 '<div class="lb">字号 <b class="fsv"></b></div><div class="fsr"><button class="chip5" data-d="-0.5">A−</button><input type="range" class="fsi" min="8" max="16" step="0.5"><button class="chip5" data-d="0.5">A+</button></div>' +
                 '<div class="smp">正文示例：牛顿第二定律 <i>F</i> = <i>ma</i>，加速度与合力成正比。<br>第二行用来看行距效果。</div>' +
-                '<div class="lb">行距</div><div class="seg" data-k="lh"><button class="chip5" data-v="c">紧凑</button><button class="chip5" data-v="n">标准</button><button class="chip5" data-v="l">宽松</button><button class="chip5" data-v="x">很宽（留批注）</button></div>' +
+                '<div class="lb">行距</div><div class="seg" data-k="lh"><button class="chip5" data-v="c">紧凑</button><button class="chip5" data-v="n">标准</button><button class="chip5" data-v="l">宽松</button><button class="chip5" data-v="x">很宽</button></div>' +
                 '<div class="lb">段落间距</div><div class="seg" data-k="ps"><button class="chip5" data-v="c">紧凑</button><button class="chip5" data-v="n">标准</button><button class="chip5" data-v="l">宽松</button></div>' +
                 '<div class="lb">公式大小</div><div class="seg" data-k="ms"><button class="chip5" data-v="s">小</button><button class="chip5" data-v="n">标准</button><button class="chip5" data-v="l">大</button></div>' +
                 '<div class="lb">字体</div><div class="seg" data-k="ff"><button class="chip5" data-v="song">宋体</button><button class="chip5" data-v="hei">黑体</button></div>' +
@@ -5112,6 +5130,32 @@ jobs:
                 '<div class="mute" style="font-size:13px;line-height:1.6;margin-top:2px">直接生成 PDF 文件，保存到 下载/VideoToNote，不经过系统打印。页边距、分栏、页码都由 App 排好。</div>' +
                 '<div class="acts"><button class="sec" data-a="rs">恢复默认</button><button class="sec" data-a="x">取消</button><button class="big" data-a="go" style="flex:1">导出</button></div></div>';
               m.querySelector(".ttl").textContent = "《" + String(current.title || "").slice(0, 30) + "》";
+              const lpv = document.createElement("div"); lpv.className = "lpv";
+              lpv.innerHTML = '<div class="lpvT">实时预览 · 第 1 页<span></span></div><div class="lpvF"><div class="pgx"><style></style><div class="ptl"><b></b><span></span></div><div class="pbd"></div><div class="pno">1 / …</div></div></div>';
+              lpv.querySelector(".ptl b").textContent = current.title || "笔记";
+              lpv.querySelector(".ptl span").textContent = (current.tag ? current.tag + " · " : "") + new Date(current.time || Date.now()).toLocaleDateString();
+              const sheet = m.querySelector(".vSheet"); sheet.insertBefore(lpv, sheet.querySelector(".lb"));
+              const pvw0 = m.querySelector(".pvw"); if (pvw0) pvw0.style.display = "none";
+              let lastImg = null;
+              function pvBody() {
+                if (lastImg === o.img) return; lastImg = o.img;
+                const tmp = lpv.querySelector(".pbd"); tmp.innerHTML = render(curMd());
+                if (o.img === "0") tmp.querySelectorAll("img,figure,.shot").forEach(x => x.remove());
+                if (o.img === "2") { Array.from(tmp.querySelectorAll("h1,h2,h3,h4")).filter(h => /课堂截图/.test(h.textContent)).forEach(h => { const lv = +h.tagName[1]; let n = h.nextElementSibling; while (n && !(/^H[1-4]$/.test(n.tagName) && +n.tagName[1] <= lv) && n.tagName !== "HR") { const x = n; n = n.nextElementSibling; x.remove(); } h.remove(); }); }
+              }
+              function pvFit() { const f = lpv.querySelector(".lpvF"), w = f.clientWidth || 300; const k = w / 794; lpv.querySelector(".pgx").style.transform = "scale(" + k + ")"; f.style.height = Math.round(1123 * k) + "px"; }
+              function pvPaint() {
+                pvBody();
+                const g = lpv.querySelector(".pgx"), mg = (MG[o.mg] || MG.n);
+                g.style.padding = mg; g.style.fontSize = fsv(o); g.style.lineHeight = LH[o.lh] || "1.62";
+                g.style.fontFamily = o.ff === "hei" ? "'Noto Sans CJK SC',sans-serif" : "'Noto Serif SC','Noto Serif CJK SC',serif";
+                g.querySelector(".pbd").className = "pbd" + (o.col === "2" ? " c2" : "");
+                g.querySelector(".pno").style.display = o.pn === "0" ? "none" : "";
+                g.querySelector(".pno").style.bottom = "calc(" + mg.split(" ")[2] + " / 2 - 6px)";
+                g.querySelector("style").textContent = xcss(o).replace(/(^|\})([^{}@]+)\{/g, (x, a, sel) => a + sel.split(",").map(t => ".lpv .pgx " + t.trim()).join(",") + "{");
+                lpv.querySelector(".lpvT span").textContent = "  " + parseFloat(fsv(o)) + " 磅 · " + ({ c: "紧凑", n: "标准", l: "宽松", x: "很宽" }[o.lh] || "标准") + "行距 · 公式" + ({ s: "小", n: "标准", l: "大" }[o.ms] || "标准");
+                pvFit();
+              }
               const pg = m.querySelector(".pg");
               function paint() {
                 m.querySelectorAll(".seg").forEach(sg => sg.querySelectorAll("button").forEach(b => b.classList.toggle("on", o[sg.dataset.k] === b.dataset.v)));
@@ -5119,6 +5163,7 @@ jobs:
                 const f = parseFloat(fsv(o)); m.querySelector(".fsi").value = f; m.querySelector(".fsv").textContent = f + " 磅";
                 const sp = m.querySelector(".smp"); sp.style.fontSize = (f * 1.333).toFixed(1) + "px"; sp.style.lineHeight = LH[o.lh] || "1.62";
                 sp.style.fontFamily = o.ff === "hei" ? "sans-serif" : "'Noto Serif SC',serif";
+                try { pvPaint(); } catch (e) {}
               }
               m.querySelectorAll(".seg button").forEach(b => b.onclick = () => { o[b.closest(".seg").dataset.k] = b.dataset.v; paint(); });
               m.querySelector(".fsi").oninput = e => { o.fsn = String(e.target.value); paint(); };
@@ -5130,6 +5175,7 @@ jobs:
               m.querySelector('[data-a="x"]').onclick = close;
               m.querySelector('[data-a="go"]').onclick = async () => { localStorage.setItem("vtn_pdf", JSON.stringify(o)); close(); await go(o); };
               window.__sheetClose = close; document.body.appendChild(m);
+              try { pvPaint(); new ResizeObserver(pvFit).observe(lpv.querySelector(".lpvF")); } catch (e) {}
             }
             async function legacyGo(o) {
               if (!HAS_NATIVE || !Native.printPdf2) { snack("请在安卓应用里使用"); return; }
