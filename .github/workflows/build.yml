@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 78
-                  versionName "2.6.0"
+                  versionCode 79
+                  versionName "2.6.1"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -2441,6 +2441,24 @@ jobs:
           .vDlg .bb{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
           hr{border:0;border-top:1px solid var(--outline-variant)}
           ::selection{background:var(--on-surface);color:var(--background)}
+
+          /* v2.6.1 统一按钮高度：44 / 36 / 48 三档 */
+          #readTools{display:flex!important;flex-wrap:wrap;align-items:center!important;gap:10px!important}
+          #readTools>*{margin:0!important;align-self:center!important}
+          #readTools .pri{height:44px!important;min-height:44px!important;padding:0 20px!important;box-shadow:none!important;display:inline-flex!important;align-items:center;gap:8px}
+          #readTools .grp{display:inline-flex!important;align-items:center!important;height:44px!important;padding:0 4px!important;border-radius:999px!important;border:1px solid var(--outline-variant)!important;background:transparent!important;box-shadow:none!important}
+          #readTools .grp .chip5{height:36px!important;min-height:36px!important;padding:0 14px!important;margin:0!important;border:0!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important;display:inline-flex!important;align-items:center;justify-content:center;line-height:1}
+          #readTools .grp .chip5+.chip5{border-left:0!important;border-radius:999px!important}
+          #readTools .grp .chip5:active{background:var(--surface-container-high)!important}
+          .verBar button,.vers button,.vtab,#verBar .chip5,.chip5.ver{height:36px!important;min-height:36px!important;padding:0 16px!important;box-shadow:none!important;margin:0 6px 0 0!important}
+          .acts{align-items:center!important}
+          .acts>button,.acts>button.big,.acts>button.sec{height:48px!important;min-height:48px!important;margin:0!important;padding:0 22px!important;font-size:15px!important;display:inline-flex!important;align-items:center;justify-content:center;box-shadow:none!important;line-height:1}
+          .acts[style*="column"]>button{width:100%}
+          .vDlg .bb button{height:44px!important;min-height:44px!important;margin:0!important;padding:0 18px!important;box-shadow:none!important}
+          .pdfS .fsr button{height:44px!important;min-height:44px!important;width:56px;padding:0!important;margin:0!important;flex:0 0 auto}
+          .pdfS .seg .chip5{height:40px!important;min-height:40px!important;margin:0!important}
+          #v5pdf,#v5md,#v5prt{height:44px!important;min-height:44px!important;margin:0 8px 0 0!important;box-shadow:none!important}
+          #tagBar button{height:34px!important;min-height:34px!important;margin:0!important;display:inline-flex;align-items:center}
           </style>
           <script>
           (function(){var m=localStorage.getItem("vtn_theme")||"auto";var d=m==="dark"||(m==="auto"&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.dataset.theme=d?"dark":"light";})();
@@ -3956,9 +3974,11 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.6.0";
+          const APP_VER = "2.6.1";
           const CHANGELOG = [
-            ["2.6.0", "笔记生成后自动判断分类（优先归入已有分类，没有合适的会新建 2~4 字分类，长按可改）；整个应用视觉重做：参考 Awwwards、Land-book、Siteinspire 等设计站，改为暖白纸色底、细线边框、大号紧排标题、小号字母间距标签、圆角卡片、黑白描边按钮，深色模式同步调整"],\n            ["2.5.5", "修复导出 PDF 预览右侧被裁掉一截（按实际宽度重新缩放，布局稳定后再校准一次）；导出完成后“打开”默认用荣耀文档，新增“分享”按钮可发给其他应用"],
+            ["2.6.1", "阅读页顶部工具栏重做：导出 PDF、搜索/目录、字体/字号统一为 44px 高的胶囊，去掉方框和阴影；统一按钮高度——导出面板底部“恢复默认/取消/导出”同为 48px，弹窗按钮、字号 A-/A+、分段按钮、分类标签、版本切换各自统一高度"],
+            ["2.6.0", "笔记生成后自动判断分类（优先归入已有分类，没有合适的会新建 2~4 字分类，长按可改）；整个应用视觉重做：参考 Awwwards、Land-book、Siteinspire 等设计站，改为暖白纸色底、细线边框、大号紧排标题、小号字母间距标签、圆角卡片、黑白描边按钮，深色模式同步调整"],
+            ["2.5.5", "修复导出 PDF 预览右侧被裁掉一截（按实际宽度重新缩放，布局稳定后再校准一次）；导出完成后“打开”默认用荣耀文档，新增“分享”按钮可发给其他应用"],
             ["2.5.4", "导出 PDF 面板重新设计（参考 Awwwards、Land-book 等设计站的极简风格）：分组标题改为小号字母间距标签、分段按钮加高圆角并加按压反馈、按钮文字不再折行（“很宽（留批注）”改为“很宽”）；预览像一张真纸带柔和阴影，平板上预览区加浅色底板；取消/导出按钮固定在底部，翻到哪都能点"],
             ["2.5.3", "导出 PDF 面板加入实时预览：直接显示当前笔记第 1 页的真实排版，改字号、行距、段落间距、公式大小、字体、分栏、页边距、截图、页码、标题栏时立刻更新；平板横屏时预览在左、设置在右；修复“公式大小”在面板里看不出区别（原示例文字里没有公式）"],
             ["2.5.2", "元素周期表进度加入元素卡片：点亮到高中常考元素时显示一条重点化学方程式（如 Na 与水、实验室制氯气、银镜反应），其他元素显示一条小常识（如氦先在太阳上被发现、铯原子钟定义秒）；共 55 种元素有内容，每条至少停留约 3 秒，进度跳得快也来得及看"],
@@ -4733,6 +4753,7 @@ jobs:
               ".vDlg .tt{font-size:18px;font-weight:600;padding:22px 22px 6px}.vDlg .mm{font-size:15px;line-height:1.55;color:var(--on-surface-variant);padding:0 22px 20px;white-space:pre-line}" +
               ".vDlg .bb{display:flex;border-top:1px solid var(--outline-variant,rgba(128,128,128,.22))}.vDlg .bb button{flex:1;height:50px;min-height:0;border:0;border-radius:0;background:transparent;font-size:16px;color:var(--primary,#111111);box-shadow:none}" +
               ".vDlg .bb button+button{border-left:1px solid var(--outline-variant,rgba(128,128,128,.22));font-weight:600}.vDlg .bb button.dz{color:#FF3B30}.vDlg .bb button:active{background:rgba(128,128,128,.12);transform:none}" +
+              ".vDlg .bb button,.vDlg .bb button+button{border-radius:0!important;border-top:0!important;border-right:0!important;border-bottom:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}.vDlg .bb button+button{border-left:1px solid var(--outline-variant,rgba(128,128,128,.22))!important}.vDlg .bb button:active{background:rgba(128,128,128,.12)!important}" +
               "#undoBar{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translate(-50%,40px);opacity:0;pointer-events:none;z-index:9997;display:flex;align-items:center;gap:6px;background:#2c2c2e;color:#fff;border-radius:16px;padding:6px 6px 6px 18px;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:transform .34s cubic-bezier(.34,1.56,.64,1),opacity .2s;max-width:92vw}" +
               "#undoBar.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}#undoBar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
               "#undoBar button{background:rgba(90,200,250,.16);border:0;color:#5AC8FA;font-weight:600;font-size:15px;padding:0 16px;height:38px;min-height:0;border-radius:12px;flex:none}" +
