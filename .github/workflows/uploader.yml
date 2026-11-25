@@ -898,6 +898,7 @@ jobs:
           <div class="c"><h2>行为</h2>
           <label>视频笔记包名</label><input id="pkg" type="text">
           <label class="chk"><input id="auto" type="checkbox">编译成功后自动下载并打开 DSH GO</label>
+          <label class="chk"><input id="quick" type="checkbox">打开 App 时，若 build.yml 是 <input id="qs" type="number" style="width:64px;display:inline-block;padding:4px 6px"> 秒内刚下载的，自动上传并编译</label>
           <label class="chk"><input id="dry" type="checkbox">试运行（只检查，不提交）</label>
           <button class="main" onclick="saveOpt()">保存设置</button></div>
           </div></div>
@@ -913,6 +914,11 @@ jobs:
            r.style.setProperty("--p",done*25);r.dataset.t=bad?"失败":done>=4?"完成":on?(done+1)+"/4":"就绪"}
           function theme(){const d=matchMedia("(prefers-color-scheme: dark)").matches;try{App.setBars(d?"#0c0c0c":"#f6f6f4",!d)}catch(e){}}
           matchMedia("(prefers-color-scheme: dark)").addEventListener("change",theme);
+          function quick(){try{if(busy||App.svcRunning()||!$("quick").checked||!LS.getItem("vtn_tok")||!files.length)return;
+           const x=files[0],age=(Date.now()-x.mtime)/1000,lim=+$("qs").value||30,key=x.path+"@"+x.mtime;
+           if(age<0||age>lim||LS.getItem("vtn_quick")==key)return;
+           LS.setItem("vtn_quick",key);$("f").value=x.path;showFile();tab(0);
+           say("检测到 "+Math.round(age)+" 秒前下载的 "+x.name+"，自动上传编译","g");App.toast("自动上传："+x.name);act(run)}catch(e){}}
           class Fail extends Error{}
           function say(m,c){const d=document.createElement("div");d.className=c||"";d.textContent="["+new Date().toTimeString().slice(0,8)+"] "+m;$("log").appendChild(d);$("log").scrollTop=1e9;if(c=="r"){$("logbox").open=true;tab(0)}}
           function st(t,sub){$("st").textContent=t;if(sub!==undefined)$("sub").textContent=sub}
@@ -923,8 +929,8 @@ jobs:
           function showTok(){const t=LS.getItem("vtn_tok");$("tokpill").innerHTML=t?'<span class="pill ok">已授权</span>':'<span class="pill no">未设置 token</span>'}
           function saveTok(){const t=$("tok").value.trim();if(!t)return App.toast("先粘贴 token");LS.setItem("vtn_tok",t);$("tok").value="";showTok();App.toast("已保存")}
           function opt(){return JSON.parse(LS.getItem("vtn_opt")||"{}")}
-          function loadOpt(){const o=opt();for(const k in DEF)$(k).value=o[k]||DEF[k];$("auto").checked=o.auto!==false}
-          function saveOpt(){const o=opt();for(const k in DEF)o[k]=$(k).value.trim();o.auto=$("auto").checked;LS.setItem("vtn_opt",JSON.stringify(o));App.toast("已保存")}
+          function loadOpt(){const o=opt();for(const k in DEF)$(k).value=o[k]||DEF[k];$("auto").checked=o.auto!==false;$("quick").checked=o.quick!==false;$("qs").value=o.qs||30}
+          function saveOpt(){const o=opt();for(const k in DEF)o[k]=$(k).value.trim();o.auto=$("auto").checked;o.quick=$("quick").checked;o.qs=+$("qs").value||30;LS.setItem("vtn_opt",JSON.stringify(o));App.toast("已保存")}
           function dshPkg(){return opt().dsh||""}
           function loadApps(){apps=JSON.parse(App.listApps()).sort((a,b)=>a.name.localeCompare(b.name,"zh"));
            let cur=dshPkg();if(!cur){const h=apps.find(a=>/dsh/i.test(a.name)||/dsh/i.test(a.pkg));if(h){cur=h.pkg;const o=opt();o.dsh=cur;LS.setItem("vtn_opt",JSON.stringify(o))}}
@@ -943,7 +949,7 @@ jobs:
           $("f").onchange=showFile;
           function showInst(){const s=App.installedInfo($("pkg").value.trim());if(!s){$("iv").textContent="未安装";return}
            const i=JSON.parse(s);$("iv").textContent=i.name+"（"+i.code+"）"}
-          window.onAppResume=()=>{bg();showInst();loadApps();if(!busy)loadFiles(false)};
+          window.onAppResume=()=>{bg();showInst();loadApps();if(!busy){loadFiles(false);quick()}};
           async function gh(path,o={}){const h={Accept:"application/vnd.github+json",Authorization:"token "+LS.getItem("vtn_tok")};if(o.body)h["Content-Type"]="application/json";
            try{const r=await fetch(API+path,{method:o.method||"GET",headers:h,body:o.body?JSON.stringify(o.body):undefined,cache:"no-store"});let j=null;try{j=await r.json()}catch(e){}return{s:r.status,j}}catch(e){return{s:0,j:{message:String(e)}}}}
           function repo(){return $("repo").value.trim().replace(/^\/|\/$/g,"")}
@@ -999,7 +1005,7 @@ jobs:
             throw new Fail("上传失败（HTTP "+r.s+"）："+det)}
            const sha=res.commit.sha;say("上传成功，提交 "+sha.slice(0,7),"g");link("查看提交",res.commit.html_url);
            step(1);st("等待编译","已交给后台，可以切走，完成后自动下载并打开 DSH GO");svcStart({sha,auto:$("auto").checked})}
-          theme();tab(+LS.getItem("vtn_tab")||0);loadOpt();showTok();loadFiles(false);showInst();loadApps();bg();if(App.svcRunning()){busy=true;$("go").disabled=true}JSON.parse(App.events()).forEach(e=>onNative(e[0],e[1]));
+          theme();tab(+LS.getItem("vtn_tab")||0);loadOpt();showTok();loadFiles(false);showInst();loadApps();bg();if(App.svcRunning()){busy=true;$("go").disabled=true}JSON.parse(App.events()).forEach(e=>onNative(e[0],e[1]));quick();
           </script></body></html>
           EOF_H
 
@@ -1031,4 +1037,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_NO: ${{ github.run_number }}
         run: |
-          gh release create "uploader-1.0.$RUN_NO" BuildUploader.apk --prerelease --title "build助手 1.0.$RUN_NO" --notes "build助手自动构建（后台运行：编译、下载完成后自动打开 DSH GO）（预发布，不影响视频笔记的 latest）"
+          gh release create "uploader-1.0.$RUN_NO" BuildUploader.apk --prerelease --title "build助手 1.0.$RUN_NO" --notes "build助手自动构建（打开时自动上传 30 秒内下载的 build.yml）（预发布，不影响视频笔记的 latest）"
