@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 67
-                  versionName "2.2.1"
+                  versionCode 68
+                  versionName "2.2.2"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -3913,8 +3913,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.2.1";
+          const APP_VER = "2.2.2";
           const CHANGELOG = [
+            ["2.2.2", "本地视频进度条重做：转写时停在“转写”步骤（不再误跳到“识图”），总进度按转写百分比增长，增加细进度条和预计剩余时间"],
             ["2.2.1", "修复选了本地视频后点“生成笔记”提示“请先粘贴视频链接”：选中后输入框自动填入本地视频名并锁定"],
             ["2.2.0", "支持本地视频：生成页可选择本地视频；优先用视频内嵌字幕，也可选外挂字幕（srt/vtt/ass）；都没有时用本机离线语音转写（SenseVoice + Silero VAD，不耗额度，需先导入模型文件）；本地视频也能自动截图"],
             ["2.1.3", "笔记库搜索框改为整条同色（学 Grok），点开变白加细边，可一键清空；动效优化：切页轻微上浮、笔记卡片依次浮现、按钮回弹、公式弹窗缩放弹出、展开内容渐入；系统开启减少动画时自动关闭动效"],
@@ -4000,15 +4001,18 @@ jobs:
           function pvGate() { return PV.paused ? new Promise(r => PV.waiters.push(r)) : Promise.resolve(); }
           function pvDraw() {
             const f = $("pvFlow"); if (!f) return;
-            f.innerHTML = PV_ST.map((s, i) => '<div class="pvS ' + (i < PV.stage ? "done" : i === PV.stage ? "cur" : "") + '"><i>' + (i < PV.stage ? "✓" : i + 1) + "</i>" + s + "</div>").join("");
+            f.innerHTML = PV_ST.map((s, i) => '<div class="pvS ' + (i < PV.stage ? "done" : i === PV.stage ? "cur" : "") + '"><i>' + (i < PV.stage ? "✓" : i + 1) + "</i>" + ((i === 1 && window.__LV && __LV.cur && !__LV.sub && !(__LV.cur.subs && __LV.cur.subs.length)) ? "转写" : s) + "</div>").join("");
             $("pvReq").textContent = PV.done; $("pvRun").textContent = PV.run;
             let pct = Math.round(PV.stage / (PV_ST.length - 1) * 100);
             if (PV.stage >= 3 && PV.stage <= 5 && PV.aiTotal) pct = Math.min(95, Math.round((PV.stage + Math.min(1, PV.aiDone / PV.aiTotal)) / (PV_ST.length - 1) * 100));
+            if (PV.stage === 1 && PV.sub) pct = Math.round((1 + Math.min(1, PV.sub)) / (PV_ST.length - 1) * 100);
             $("pvPct").textContent = pct + "%";
+            try { const bar = $("pvBar") || (() => { const b = document.createElement("div"); b.id = "pvBar"; b.innerHTML = "<i></i>"; $("pvNow").before(b); return b; })(); bar.style.display = (PV.stage === 1 && PV.sub) ? "" : "none"; bar.firstChild.style.width = Math.round(Math.min(1, PV.sub || 0) * 100) + "%"; } catch (e) {}
             $("progCard").classList.toggle("paused", PV.paused);
           }
           function pvSet(s) { if (s > PV.stage) { PV.stage = s; pvDraw(); } }
           function pvReset() {
+            PV.sub = 0; PV.asrT0 = 0;
             Object.assign(PV, { paused: false, done: 0, run: 0, stage: 0, aiDone: 0, aiTotal: 0, t0: Date.now() });
             PV.waiters.splice(0).forEach(r => r());
             const b = $("pvPause"); b.textContent = "暂停"; b.classList.remove("paused"); $("pvTitle").textContent = "正在生成";
@@ -4039,6 +4043,21 @@ jobs:
             const m = String(msg || "");
             if (!/已暂停|继续生成/.test(m) && $("pvNow")) $("pvNow").textContent = m;
             if (cls === "e" || /出错|失败/.test(m)) return;
+            if (/^(本地视频|读取内嵌字幕|内嵌字幕|使用外挂字幕|开始本机离线转写|正在加载转写模型|本机转写|转写完成)/.test(m)) {
+              pvSet(1);
+              const q = m.match(/^本机转写 ([\d:]+) \/ ([\d:]+)（(\d+)%）/);
+              if (q) {
+                const p = +q[3] / 100; PV.sub = p;
+                if (!PV.asrT0) PV.asrT0 = Date.now();
+                const el = (Date.now() - PV.asrT0) / 1000;
+                let eta = "";
+                if (p > 0.03 && el > 5) { const r = Math.round(el / p * (1 - p)); eta = "，预计还要 " + (r >= 60 ? Math.floor(r / 60) + " 分 " : "") + (r % 60) + " 秒"; }
+                if ($("pvNow")) $("pvNow").textContent = "本机转写 " + q[1] + " / " + q[2] + "（" + q[3] + "%）" + eta;
+                pvDraw();
+              }
+              if (/^转写完成/.test(m)) { PV.sub = 1; pvDraw(); }
+              return;
+            }
             if (/汇总|合并/.test(m)) pvSet(5);
             else if (/分段|写笔记|生成笔记|第\s*\d+\s*段|正在写/.test(m)) pvSet(4);
             else if (/识图|识别/.test(m)) pvSet(3);
@@ -5454,7 +5473,7 @@ jobs:
             if (!HAS_NATIVE || !Native.pickVideo) return;
             const L = window.__LV = { cur: null, sub: null, asr: false };
             const st = document.createElement("style");
-            st.textContent = "#lvBox{margin:8px 0 4px}#lvBox .lvRow{display:flex;gap:8px;flex-wrap:wrap}#lvBox .chip5{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:18px;cursor:pointer}#lvBox .chip5 .ic{font-size:18px}#lvInfo{margin-top:8px;font-size:13px;line-height:1.7}#lvInfo b{color:var(--on-surface)}#lvInfo a{color:var(--on-surface);text-decoration:underline}";
+            st.textContent = "#pvBar{height:6px;border-radius:3px;background:var(--fn-line);overflow:hidden;margin:10px 0 4px}#pvBar i{display:block;height:100%;background:var(--on-surface);border-radius:3px;transition:width .6s ease}#lvBox{margin:8px 0 4px}#lvBox .lvRow{display:flex;gap:8px;flex-wrap:wrap}#lvBox .chip5{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:18px;cursor:pointer}#lvBox .chip5 .ic{font-size:18px}#lvInfo{margin-top:8px;font-size:13px;line-height:1.7}#lvInfo b{color:var(--on-surface)}#lvInfo a{color:var(--on-surface);text-decoration:underline}";
             document.head.appendChild(st);
             const fr = document.querySelector("#genCard .frow"); if (!fr) return;
             const box = document.createElement("div"); box.id = "lvBox";
