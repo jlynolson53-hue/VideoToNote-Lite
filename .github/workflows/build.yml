@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 79
-                  versionName "2.6.1"
+                  versionCode 80
+                  versionName "2.6.2"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -2418,30 +2418,6 @@ jobs:
           .rpl{position:absolute;border-radius:50%;background:currentColor;opacity:.18;transform:scale(0);animation:rp .45s ease-out forwards;pointer-events:none}
           @keyframes rp{to{transform:scale(1);opacity:0}}
 
-          /* v2.6.0 视觉重做：参考 Awwwards / Land-book / Siteinspire / Lapa / Landing.love / One Page Love / 21st 的编辑风极简 */
-          :root{--background:#f4f2ee;--surface:#fbfaf8;--surface-container-low:#fbfaf8;--surface-container:#efece6;--surface-container-high:#e7e3dc;--on-surface:#141414;--on-surface-variant:#6b6862;--outline:#a8a49c;--outline-variant:rgba(20,20,20,.10);--secondary-container:#e9e5de;--on-secondary-container:#141414}
-          :root[data-theme=dark]{--background:#0e0e0e;--surface:#161616;--surface-container-low:#161616;--surface-container:#1d1d1d;--surface-container-high:#262626;--on-surface:#ededeb;--on-surface-variant:#8f8d88;--outline:#555;--outline-variant:rgba(255,255,255,.09);--secondary-container:#232323;--on-secondary-container:#ededeb;--on-primary:#0e0e0e}
-          html,body{font-feature-settings:"tnum" 0;-webkit-font-smoothing:antialiased;letter-spacing:.01em}
-          .wrap{max-width:1080px;padding:0 20px}
-          h1.hd{font-size:clamp(34px,6vw,56px);line-height:1.05;font-weight:600;letter-spacing:-.03em;margin:36px 0 24px}
-          h2{font-size:24px;font-weight:600;letter-spacing:-.02em}
-          label{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--on-surface-variant);margin-top:14px}
-          input,textarea,select{border:1px solid var(--outline-variant);border-radius:14px;background:var(--surface);transition:border-color .2s,box-shadow .2s}
-          input:focus,textarea:focus,select:focus{border:1px solid var(--on-surface);padding:14px 16px;box-shadow:0 0 0 4px rgba(128,128,128,.12)}
-          button{border-radius:999px;transition:transform .15s,background .2s,opacity .2s;box-shadow:none}
-          button:active{transform:scale(.97)}
-          button.sec,button.ghost{background:transparent;border:1px solid var(--outline-variant);color:var(--on-surface)}
-          .card,.item,details{background:var(--surface)!important;border:1px solid var(--outline-variant)!important;border-radius:22px!important;box-shadow:none!important}
-          .item{transition:transform .2s,border-color .2s}.item:active{transform:scale(.99)}
-          .mute{color:var(--on-surface-variant);font-size:13px}
-          #tagBar button,#tagBar .chip,.chip{border-radius:999px;border:1px solid var(--outline-variant);background:transparent;color:var(--on-surface);font-size:13px;padding:6px 14px;min-height:34px}
-          #tagBar .on,#tagBar button.on,.chip.on{background:var(--on-surface);color:var(--background);border-color:var(--on-surface)}
-          .vSheet{border-radius:28px 28px 0 0;border:1px solid var(--outline-variant);box-shadow:0 -20px 60px -20px rgba(0,0,0,.25)}
-          .vDlg{border-radius:24px!important;border:1px solid var(--outline-variant)}
-          .vDlg .bb{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
-          hr{border:0;border-top:1px solid var(--outline-variant)}
-          ::selection{background:var(--on-surface);color:var(--background)}
-
           /* v2.6.1 统一按钮高度：44 / 36 / 48 三档 */
           #readTools{display:flex!important;flex-wrap:wrap;align-items:center!important;gap:10px!important}
           #readTools>*{margin:0!important;align-self:center!important}
@@ -3974,8 +3950,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.6.1";
+          const APP_VER = "2.6.2";
           const CHANGELOG = [
+            ["2.6.2", "撤销 2.6.0 参考设计站的整体视觉重做（暖白底、大标题、细线卡片等），界面恢复到改版前的样式；保留自动分类、按钮统一高度、弹窗按钮直线分隔"],
             ["2.6.1", "阅读页顶部工具栏重做：导出 PDF、搜索/目录、字体/字号统一为 44px 高的胶囊，去掉方框和阴影；统一按钮高度——导出面板底部“恢复默认/取消/导出”同为 48px，弹窗按钮、字号 A-/A+、分段按钮、分类标签、版本切换各自统一高度"],
             ["2.6.0", "笔记生成后自动判断分类（优先归入已有分类，没有合适的会新建 2~4 字分类，长按可改）；整个应用视觉重做：参考 Awwwards、Land-book、Siteinspire 等设计站，改为暖白纸色底、细线边框、大号紧排标题、小号字母间距标签、圆角卡片、黑白描边按钮，深色模式同步调整"],
             ["2.5.5", "修复导出 PDF 预览右侧被裁掉一截（按实际宽度重新缩放，布局稳定后再校准一次）；导出完成后“打开”默认用荣耀文档，新增“分享”按钮可发给其他应用"],
