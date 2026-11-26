@@ -76,11 +76,11 @@ LOG.append('click gen in det '+str(clk('.nav button[data-p="gen"]'))); time.slee
 ev('(function(){show(loadHist()[0]);return 1})()'); time.sleep(3)
 for col in ['1','2']:
     before=A('shell','ls','/sdcard/Download/VideoToNote/')
-    LOG.append('pdfbtn '+str(clk('#v5pdf'))); time.sleep(3)
-    LOG.append('segs '+str(ev('JSON.stringify(Array.from(document.querySelectorAll(".seg")).map(s=>[s.dataset.k,Array.from(s.querySelectorAll("button")).map(b=>b.dataset.v+":"+b.textContent.trim()+(b.classList.contains("on")?"*":""))]))')))
-    LOG.append('col '+str(clk('.seg[data-k="col"] button[data-v="'+col+'"]'))); time.sleep(2)
+    LOG.append('pdfbtn '+str(ev('(function(){var b=Array.from(document.querySelectorAll("#pg-det button")).find(x=>/导出 ?PDF/.test(x.textContent));if(!b)return "NOBTN";b.click();return "ok"})()'))); time.sleep(3)
+    LOG.append('segs '+str(ev('JSON.stringify(Array.from(document.querySelectorAll(".pdfS .seg")).map(s=>[s.dataset.k,Array.from(s.querySelectorAll("button")).map(b=>b.dataset.v+":"+b.textContent.trim()+(b.classList.contains("on")?"*":""))]))')))
+    LOG.append('col '+str(clk('.pdfS .seg[data-k="col"] [data-v="'+col+'"]'))); time.sleep(2)
     shot('06_导出面板_col'+col)
-    LOG.append('go '+str(clk('[data-a="go"]')))
+    LOG.append('go '+str(clk('.pdfS [data-a="go"]')))
     for _ in range(60):
         time.sleep(3)
         if A('shell','ls','/sdcard/Download/VideoToNote/')!=before: break
