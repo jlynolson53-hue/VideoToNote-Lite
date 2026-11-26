@@ -904,7 +904,7 @@ jobs:
                       if (ii != null && MainActivity.vc(ai) <= MainActivity.vc(ii)) {
                           emit("g", "已是最新（已装 " + ii.versionName + "），跳过安装");
                           emit("step", "4"); emit("st", "已是最新|" + ii.versionName);
-                          result("视频笔记已是最新", ii.versionName, getPackageManager().getLaunchIntentForPackage(pkg));
+                          openVtn(ii.versionName, "视频笔记已是最新");
                           return true;
                       }
                       status("静默安装中", "首次需在系统弹窗允许 USB 调试");
@@ -933,11 +933,13 @@ jobs:
 
               void openVtn(String title, String head) {
                   Intent i = getPackageManager().getLaunchIntentForPackage(pkg);
-                  if (i == null) { result(head, title, null); return; }
-                  i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                  if (MainActivity.visible || Settings.canDrawOverlays(this)) {
-                      try { startActivity(i); emit("g", "已打开视频笔记"); } catch (Exception e) { emit("w", "打开视频笔记失败：" + e.getMessage()); }
-                  } else emit("w", "没开悬浮窗权限，已发通知，点通知打开视频笔记");
+                  if (i != null) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                  try { Thread.sleep(1200); } catch (Exception ignored) {}
+                  boolean ok = false;
+                  try { AdbInstall.setKeyDir(getFilesDir().getAbsolutePath()); ok = AdbInstall.launch(pkg).ok(); } catch (Exception ignored) {}
+                  if (!ok && i != null && (MainActivity.visible || Settings.canDrawOverlays(this))) { try { startActivity(i); ok = true; } catch (Exception ignored) {} }
+                  if (ok) { emit("g", "已跳转到视频笔记"); emit("step", "4"); }
+                  else emit("w", "系统不让后台跳转，已发通知，点通知打开视频笔记");
                   result(head, "点这里打开 " + title, i);
               }
 
@@ -1108,6 +1110,18 @@ jobs:
                   finally { if (c != null) c.close(); }
               }
 
+              public static Result launch(String pkg) {
+                  Conn c = null;
+                  try {
+                      c = connect(8000);
+                      String out = exec(c, "monkey -p " + pkg + " -c android.intent.category.LAUNCHER 1 2>&1");
+                      if (out.contains("No activities") || out.contains("aborted")) return new Result(FAIL, last(out), out);
+                      return new Result(OK, "已打开", out);
+                  } catch (AdbEx e) { return new Result(e.code, e.getMessage(), null); }
+                  catch (Exception e) { return new Result(FAIL, "adb 出错：" + e, null); }
+                  finally { if (c != null) c.close(); }
+              }
+
               static String last(String t) {
                   String[] ls = t.trim().split("\n");
                   String s = ls[ls.length - 1].trim();
@@ -1227,6 +1241,44 @@ jobs:
           details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-marker{display:none}
           .tl{font-size:12px;color:var(--mu);font-weight:400}details[open] .tl::after{content:"收起"}details:not([open]) .tl::after{content:"展开"}
           @media(min-width:900px){.w{max-width:1040px}.wide{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.wide>.c{margin:0}}
+          
+          :root{--bg:#f5f5f3;--card:#ffffffd9;--tx:#0d0d0f;--mu:#71717a;--ln:#e4e4e7;--soft:#f0f0ee;--ac:#0d0d0f;--act:#fff;--hi:#6366f1;--hi2:#22d3ee;--g:#16a34a;--r:#dc2626;--sh:0 1px 2px #0000000d,0 8px 24px -12px #0000001f}
+          @media(prefers-color-scheme:dark){:root{--bg:#09090b;--card:#141417d9;--tx:#fafafa;--mu:#a1a1aa;--ln:#27272a;--soft:#1c1c20;--ac:#fafafa;--act:#09090b;--hi:#818cf8;--hi2:#67e8f9;--g:#4ade80;--r:#f87171;--sh:0 1px 0 #ffffff0a inset,0 10px 30px -14px #000}}
+          body{font-family:system-ui,-apple-system,"HarmonyOS Sans SC","PingFang SC",sans-serif;letter-spacing:-.01em;background:var(--bg);background-image:radial-gradient(60% 40% at 15% 0%,color-mix(in srgb,var(--hi) 14%,transparent),transparent 70%),radial-gradient(50% 35% at 100% 10%,color-mix(in srgb,var(--hi2) 10%,transparent),transparent 70%);background-attachment:fixed;min-height:100vh}
+          .w{padding:18px 18px 48px}
+          .top{margin:8px 0 18px}.top h1{font-size:24px;font-weight:800;letter-spacing:-.03em}.logo{border-radius:12px;box-shadow:var(--sh)}
+          .c{background:var(--card);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--ln);border-radius:22px;padding:20px;box-shadow:var(--sh);transition:transform .25s cubic-bezier(.2,.8,.2,1),border-color .25s;animation:rise .45s cubic-bezier(.2,.8,.2,1) both}
+          .pane.on .c:nth-child(2){animation-delay:.05s}.pane.on .c:nth-child(3){animation-delay:.1s}.pane.on .c:nth-child(4){animation-delay:.15s}
+          @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+          .c h2{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:12px}
+          #st{font-size:24px;font-weight:800;letter-spacing:-.03em}
+          .ring{width:72px;height:72px;background:conic-gradient(from -90deg,var(--hi),var(--hi2) calc(var(--p,0)*1%),var(--soft) 0)}
+          .ring::after{width:60px;height:60px;background:var(--bg);font-size:14px;font-weight:800}
+          .sp i{height:6px;border-radius:99px;transition:background .4s}
+          .sp.on i{background:linear-gradient(90deg,var(--hi),var(--hi2),var(--hi));background-size:200% 100%;animation:flow 1.6s linear infinite}
+          .sp.done i{background:var(--g)}
+          @keyframes flow{to{background-position:-200% 0}}
+          .bar{height:8px;border-radius:99px}.bar b{background:linear-gradient(90deg,var(--hi),var(--hi2),var(--hi));background-size:200% 100%;animation:flow 1.4s linear infinite;border-radius:99px}
+          button{border-radius:14px;font-weight:600;border:1px solid var(--ln);background:var(--card);transition:transform .18s cubic-bezier(.3,1.6,.5,1),background .2s,opacity .2s}
+          button:active{transform:scale(.95);opacity:1}
+          .main,.row .pri,.acts button.pri{border:0;background:var(--ac);color:var(--act);box-shadow:0 6px 18px -8px color-mix(in srgb,var(--hi) 70%,transparent);position:relative;overflow:hidden}
+          .main::after,.row .pri::after,.acts button.pri::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,#ffffff40 50%,transparent 70%);transform:translateX(-120%);transition:transform .7s}
+          .main:active::after,.row .pri:active::after,.acts button.pri:active::after{transform:translateX(120%)}
+          .main{padding:16px;border-radius:16px;font-size:16px}
+          .acts button{border-radius:99px;padding:9px 16px}
+          .tabs{background:color-mix(in srgb,var(--soft) 80%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--ln);border-radius:99px;padding:4px;top:8px}
+          .tabs button{border:0;border-radius:99px;transition:color .2s,background .25s}
+          .tabs button.on{background:var(--ac);color:var(--act);box-shadow:0 4px 14px -6px #0006}
+          .pane{animation:rise .35s cubic-bezier(.2,.8,.2,1)}
+          .file{border:1px dashed color-mix(in srgb,var(--hi) 40%,var(--ln));background:color-mix(in srgb,var(--hi) 5%,var(--soft));border-radius:16px}
+          .kv{padding:12px 0;border-bottom:1px dashed var(--ln)}
+          input[type=text],input[type=password],input[type=number],select.f{border:1px solid var(--ln);border-radius:14px;transition:border-color .2s,box-shadow .2s}
+          input:focus,select.f:focus{border-color:var(--hi);box-shadow:0 0 0 4px color-mix(in srgb,var(--hi) 18%,transparent)}
+          .chk input{accent-color:var(--hi)}
+          .pill{border:1px solid currentColor;background:transparent}
+          #log{background:#0b0b0e;border:1px solid #ffffff12;border-radius:16px}
+          #log div{animation:rise .3s ease both}
+          @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
           </style></head><body><div class="w">
           <div class="top"><svg viewBox="0 0 108 108" class="logo"><rect x="6" y="6" width="96" height="96" rx="22" fill="#111"/><path d="M50 28h8v26h-8z" fill="#fff"/><path d="M38 48L54 66L70 48Z" fill="#fff"/><path d="M35 64V76H73V64" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="76" cy="32" r="5" fill="#34d399"/></svg><h1>build助手<small>上传 build.yml · 编译 · 下载新版</small></h1><span id="tokpill"></span></div>
           <div class="c warn" id="perm"><b>需要文件权限</b><div style="font-size:14px;margin-top:6px">用于读取"下载"里的 build.yml，并把 APK 保存到 下载/VideoToNote。</div><button onclick="App.requestAccess()">去开启</button></div>
@@ -1266,7 +1318,7 @@ jobs:
           <div class="m" style="margin-top:10px">开了「显示在其他应用上层」，后台下载完会直接跳到 DSH GO；没开只发通知，点一下进入。</div></div>
           <div class="c"><h2>行为</h2>
           <label>视频笔记包名</label><input id="pkg" type="text">
-          <label class="chk"><input id="auto" type="checkbox">编译成功后自动下载并打开 DSH GO</label>
+          <label class="chk"><input id="auto" type="checkbox">编译成功后自动下载、静默安装并打开视频笔记</label>
           <label class="chk"><input id="quick" type="checkbox">打开 App 时，若 build.yml 是 <input id="qs" type="number" style="width:64px;display:inline-block;padding:4px 6px"> 秒内刚下载的，自动上传并编译</label>
           <label class="chk"><input id="dry" type="checkbox">试运行（只检查，不提交）</label>
           <button class="main" onclick="saveOpt()">保存设置</button></div>
