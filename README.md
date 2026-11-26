@@ -174,7 +174,7 @@ flowchart TB
 | 位置 | 作用 |
 |---|---|
 | `web/index.html` | 页面骨架和样式，主脚本位置只放占位符 `/*@@APP_JS@@*/` |
-| `web/js/*.js` | 主脚本按功能拆成 33 个文件，按文件名顺序拼接 |
+| `web/js/*.js` | 主脚本拆成 33 个文件，按“序号_模块_功能”命名（如 `20_导出_PDF.js`），按文件名顺序拼接 |
 | `web/assemble.py` | 编译时把 `web/js/*.js` 拼回 `index.html`，运行效果与单文件一样 |
 | `tools/check.py` | 编译前检查：语法、新增空 `catch`、直接读写 `localStorage`、顶层同名函数，超标就让编译失败 |
 | `.github/uitest.py` | 模拟器 UI 测试，Build APK 成功后自动运行，任一断言失败就变红 |

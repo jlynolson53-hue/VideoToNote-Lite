@@ -27,7 +27,7 @@ window.addEventListener("unhandledrejection", ev => __err(ev.reason, "未处理�
 document.addEventListener("visibilitychange", () => { if (document.hidden) __errFlush(); });
 const Store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { __err(e, "读取 " + k); return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { __err(e, "写入 " + k); throw e; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { __err(e, "写入 " + k); if (/quota/i.test(e && (e.name + e.message))) { try { (window.snack || alert)("存储空间已满，这次没能保存。请到 设置 → 备份 导出后删除一些旧笔记"); } catch (x) { __err(x, "提示存储已满"); } } throw e; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { __err(e, "删除 " + k); } },
   json(k, d) { const s = Store.get(k); if (s == null) return d; try { return JSON.parse(s); } catch (e) { __err(e, "解析 " + k); return d; } }
 };

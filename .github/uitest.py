@@ -60,6 +60,14 @@ $$\\text{孤对电子共轭程度越大} \\Rightarrow \\text{电子云密度越�
 | 苯胺 | 苯环 | 较弱 |
 | 酰胺 | 羰基 | 几乎无 |
 
+## 排版压力样例
+
+$$E=mc^2+\\frac{1}{2}mv^2+mgh+\\frac{kQq}{r}+\\int_0^{T}P(t)\\,dt+\\sum_{i=1}^{n}F_i\\cdot s_i+\\frac{p^2}{2m}+\\frac{1}{2}kx^2+\\frac{1}{2}I\\omega^2+qU+\\frac{1}{2}CU^2+\\frac{1}{2}LI^2$$
+
+| 列1 | 列2 | 列3 | 列4 | 列5 | 列6 | 列7 | 列8 | 列9 | 列10 |
+|---|---|---|---|---|---|---|---|---|---|
+| 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 | 很长很长的单元格内容 |
+
 """ + "\\n\\n".join("【例%d】这是一段用来撑满页面的测试正文，检查双栏排版时文字是否铺满整页宽度，而不是缩在左上角。氮原子的孤对电子与苯环大π键共轭后，电子云向环上分散，碱性减弱。" % i for i in range(1,26))
 item={'title':'共轭影响碱性','bvid':'BV1test','p':1,'md':MD,'srt':'','kind':'note','time':int(time.time()*1000),'tag':'化学'}
 ev('localStorage.setItem("vtn_hist",JSON.stringify(['+json.dumps(item,ensure_ascii=False)+']));location.reload();1')
@@ -107,7 +115,7 @@ chk('Store.json 坏数据不崩',ev('(function(){localStorage.setItem("vtn_uites
 chk('错误日志能记录',ev('(function(){__err(new Error("UI自测"),"uitest");return __errText().indexOf("UI自测")>=0})()') is True)
 chk('设置里有错误日志入口',ev('!!document.getElementById("errRow")') is True)
 chk('笔记数据没丢',ev('loadHist().length')==1)
-chk('导出了 PDF',len([f for r,_,fs in os.walk('out/pdf') for f in fs if f.endswith('.pdf')])>=1)
+chk('单栏和双栏都导出了 PDF',len([f for r,_,fs in os.walk('out/pdf') for f in fs if f.endswith('.pdf')])>=2)
 chk('没有脚本执行错误',not any(x.startswith('EVAL ERR') for x in LOG))
 ST['errlog']=ev('__errText()')
 json.dump({'state':ST,'log':LOG},open('out/result.json','w'),ensure_ascii=False,indent=1)
