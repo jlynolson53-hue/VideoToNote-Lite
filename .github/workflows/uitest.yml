@@ -1,0 +1,41 @@
+name: UI Test
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: release tag
+        required: false
+        default: ''
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Get APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          T="${{ inputs.tag }}"; if [ -z "$T" ]; then T=$(gh release list -L 1 --json tagName -q '.[0].tagName'); fi
+          gh release download "$T" -p '*.apk' -O app.apk
+          mkdir -p out; echo "$T" > out/tag.txt
+      - run: pip install websocket-client
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_tablet
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: python3 .github/uitest.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-out
+          path: out/

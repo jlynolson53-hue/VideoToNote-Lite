@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 86
-                  versionName "2.6.8"
+                  versionCode 87
+                  versionName "2.6.9"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -1181,7 +1181,7 @@ jobs:
               protected void onCreate(Bundle b) {
                   super.onCreate(b);
                   try { if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 7); } catch (Exception ignored) { }
-                  web = new WebView(this);
+                  web = new WebView(this); WebView.setWebContentsDebuggingEnabled(true);
                   {
                       // v1.7.8：启动时按上次主题（或系统深浅色）先设底色，防止白闪
                       String tm = "auto";
@@ -3953,8 +3953,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.6.8";
+          const APP_VER = "2.6.9";
           const CHANGELOG = [
+            ["2.6.9", "接入自动测试：开启网页调试，便于在模拟器里自动截图、导出 PDF、记录报错"],
             ["2.6.8", "修复导出 PDF 内容缩在左上角：打印时只保留导出内容，侧栏留白、页面宽度等界面样式一律不参与排版"],
             ["2.6.7", "修复导出 PDF 后点“打开”跳到文件管理的“保存至”界面：改为只找真正能阅读 PDF 的应用（优先荣耀文档），找不到就弹出应用选择"],
             ["2.6.6", "代码整理第 2 部分：弹窗按钮的样式从 3 处合并为 1 处，外观和功能不变"],
