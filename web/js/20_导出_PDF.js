@@ -64,6 +64,7 @@
     // v2.8.3：预览也做和导出相同的复查——按屏幕上的实际位置量，超出本栏的公式、表格、图片整体缩小
     function pvFix() {
       const pb = lpv.querySelector(".pbd"); if (!pb) return;
+      pb.style.overflow = "hidden"; // 预览只显示第 1 页，溢出的栏不显示
       const SEL = ".katex-display,table,pre,img,figure,.katex";
       pb.querySelectorAll("[data-pv]").forEach(e => { e.style.transform = ""; e.style.transformOrigin = ""; e.removeAttribute("data-pv"); });
       for (let pass = 0; pass < 4; pass++) {
@@ -77,6 +78,7 @@
           if (out && pb.contains(out)) return;
           if (e.classList.contains("katex") && e.parentElement.closest(".katex")) return;
           const r = e.getBoundingClientRect(); if (!r.width) return;
+          if (r.left >= P.right - 1 || r.top >= P.bottom - 1) return; // 第 1 页以外的内容，预览里不显示
           const R = (c2 && r.left >= P.left + cw + gap / 2) ? P.right : P.left + cw;
           let right = r.right; e.querySelectorAll(".katex,.base,td,th").forEach(x => { const q = x.getBoundingClientRect(); if (q.right > right) right = q.right; });
           if (right <= R + 1) return;
