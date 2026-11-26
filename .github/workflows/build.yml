@@ -2475,7 +2475,6 @@ jobs:
           :root[data-theme=dark] .nav{background:rgba(28,28,30,.8)!important}
           .nav button{color:var(--on-surface-variant)!important;font-weight:500!important}
           .nav button.on{color:var(--primary)!important}
-          .nav .pill,.nav button.on .pill{background:none!important}
           .appbar{background:rgba(242,242,247,.85)!important;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:.5px solid var(--sep)}
           :root[data-theme=dark] .appbar{background:rgba(28,28,30,.85)!important}
           .rpl{display:none!important}
@@ -2508,7 +2507,6 @@ jobs:
           @media (min-width:841px){
             .nav{background:var(--background)!important;border:none!important;box-shadow:none!important;-webkit-backdrop-filter:none;backdrop-filter:none}
             html.has-bg .nav{background:transparent!important}
-            .nav button.on .pill{background:var(--fill)!important;border-radius:14px!important}
           }
           /* v1.7.6：界面细调（按 Refactoring UI：组内紧、组间松，一个主操作） */
           .wrap{max-width:900px!important}
@@ -3952,7 +3950,7 @@ jobs:
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
           const APP_VER = "2.6.5";
           const CHANGELOG = [
-            ["2.6.5", "代码整理第 1 步：删除完全重复的样式规则（只删前面被同样规则覆盖的那份），功能和外观不变"],
+            ["2.6.5", "代码整理第 1 部分：删除侧栏里已被覆盖、不再生效的样式，外观和功能不变"],
             ["2.6.4", "修复平板上打开笔记时左边被侧栏挡住一截；在笔记里点侧栏会先关掉笔记再切页"],
             ["2.6.3", "修复平板侧栏点“笔记库”“设置”没反应：侧栏提到最上层，并加独立的切页兜底"],
             ["2.6.2", "撤销 2.6.0 参考设计站的整体视觉重做（暖白底、大标题、细线卡片等），界面恢复到改版前的样式；保留自动分类、按钮统一高度、弹窗按钮直线分隔"],
@@ -5367,7 +5365,7 @@ jobs:
               ".fn-brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;padding:4px 8px 18px;color:var(--on-surface)}" +
               ".fn-brand i{width:34px;height:34px;border-radius:9px;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:20px}" +
               ".nav button{flex-direction:row!important;justify-content:flex-start!important;gap:14px!important;padding:14px 16px!important;border-radius:16px!important;font-size:17px!important;font-weight:600!important;color:var(--on-surface)!important;background:var(--surface,#fff)!important;max-width:none!important;width:100%}" +
-              ".nav button .pill{width:auto!important;height:auto!important;background:none!important}" +
+              ".nav button .pill{width:auto!important;height:auto!important}" +
               ".nav button.on{background:var(--primary)!important;color:var(--on-primary)!important}" +
               ".wrap{max-width:960px!important;margin:0 auto!important}}" +
               "#fnOpt{border:1px solid var(--fn-line);border-radius:16px;padding:0 14px;margin:12px 0}" +
