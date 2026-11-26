@@ -89,6 +89,29 @@ for col in ['1','2']:
 A('pull','/sdcard/Download/VideoToNote/','out/pdf/')
 A('shell','settings','put','system','user_rotation','1'); time.sleep(5)
 ev('(function(){try{closeDet()}catch(e){};tab("gen");return 1})()'); time.sleep(2); state('port_gen'); shot('08_竖屏_生成')
+
+# ===== v2.8.0 新增断言：失败时让测试变红 =====
+import sys
+FAIL=[]
+def chk(name,ok):
+    LOG.append(('PASS ' if ok else 'FAIL ')+name)
+    if not ok: FAIL.append(name)
+def stv(k):
+    try: return json.loads(ST.get(k) or 'null') or {}
+    except Exception: return {}
+chk('笔记库页能打开',stv('lib').get('page')=='pg-lib')
+chk('设置页能打开',stv('set').get('page')=='pg-set')
+chk('笔记详情能打开',stv('det').get('detShow') is True)
+chk('Store 读写删',ev('(function(){Store.set("vtn_uitest","1");var a=Store.get("vtn_uitest");Store.del("vtn_uitest");return a+"|"+Store.get("vtn_uitest")})()')=='1|null')
+chk('Store.json 坏数据不崩',ev('(function(){localStorage.setItem("vtn_uitest","{bad");var r=Store.json("vtn_uitest",42);Store.del("vtn_uitest");return r})()')==42)
+chk('错误日志能记录',ev('(function(){__err(new Error("UI自测"),"uitest");return __errText().indexOf("UI自测")>=0})()') is True)
+chk('设置里有错误日志入口',ev('!!document.getElementById("errRow")') is True)
+chk('笔记数据没丢',ev('loadHist().length')==1)
+chk('导出了 PDF',len([f for r,_,fs in os.walk('out/pdf') for f in fs if f.endswith('.pdf')])>=1)
+chk('没有脚本执行错误',not any(x.startswith('EVAL ERR') for x in LOG))
+ST['errlog']=ev('__errText()')
 json.dump({'state':ST,'log':LOG},open('out/result.json','w'),ensure_ascii=False,indent=1)
 open('out/logcat.txt','w').write(A('logcat','-d','-t','3000'))
 print(json.dumps(ST,ensure_ascii=False)[:2000]); print('\n'.join(LOG)[:4000])
+if FAIL: print('失败项：',FAIL); sys.exit(1)
+print('全部通过')
