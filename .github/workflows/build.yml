@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 81
-                  versionName "2.6.3"
+                  versionCode 82
+                  versionName "2.6.4"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -3950,8 +3950,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.6.3";
+          const APP_VER = "2.6.4";
           const CHANGELOG = [
+            ["2.6.4", "修复平板上打开笔记时左边被侧栏挡住一截；在笔记里点侧栏会先关掉笔记再切页"],
             ["2.6.3", "修复平板侧栏点“笔记库”“设置”没反应：侧栏提到最上层，并加独立的切页兜底"],
             ["2.6.2", "撤销 2.6.0 参考设计站的整体视觉重做（暖白底、大标题、细线卡片等），界面恢复到改版前的样式；保留自动分类、按钮统一高度、弹窗按钮直线分隔"],
             ["2.6.1", "阅读页顶部工具栏重做：导出 PDF、搜索/目录、字体/字号统一为 44px 高的胶囊，去掉方框和阴影；统一按钮高度——导出面板底部“恢复默认/取消/导出”同为 48px，弹窗按钮、字号 A-/A+、分段按钮、分类标签、版本切换各自统一高度"],
@@ -5846,13 +5847,13 @@ jobs:
           })();
           iconFallback();
           </script>
-          <style>.nav{z-index:5000!important;pointer-events:auto!important}.nav button{pointer-events:auto!important;position:relative;z-index:1}</style>
+          <style>.nav{z-index:5000!important;pointer-events:auto!important}.nav button{pointer-events:auto!important;position:relative;z-index:1}@media (min-width:841px){#pg-det{left:256px!important}}</style>
           <script>
           // v2.6.3：侧栏导航兜底——不依赖主脚本，点了就切页
           (function(){function go(p){if(!p)return;try{if(typeof tab==="function"){tab(p);return}}catch(e){}
           document.querySelectorAll(".page").forEach(function(x){x.classList.toggle("on",x.id==="pg-"+p)});
           document.querySelectorAll(".nav button").forEach(function(x){x.classList.toggle("on",x.dataset.p===p)});window.scrollTo(0,0)}
-          document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest(".nav button[data-p]");if(!b)return;e.stopPropagation();go(b.dataset.p)},true)})();
+          document.addEventListener("click",function(e){var b=e.target&&e.target.closest&&e.target.closest(".nav button[data-p]");if(!b)return;e.stopPropagation();try{var d=document.getElementById("pg-det");if(d&&d.classList.contains("show")){if(typeof closeDet==="function")closeDet();else d.classList.remove("show")}}catch(x){}go(b.dataset.p)},true)})();
           </script>
           </body>
           </html>
