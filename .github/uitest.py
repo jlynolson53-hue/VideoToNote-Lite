@@ -94,6 +94,9 @@ for j in range(NOTE_N):
         LOG.append('pdfbtn '+str(ev('(function(){var b=Array.from(document.querySelectorAll("#pg-det button")).find(x=>/导出 ?PDF/.test(x.textContent));if(!b)return "NOBTN";b.click();return "ok"})()'))); time.sleep(3)
         LOG.append('segs '+str(ev('JSON.stringify(Array.from(document.querySelectorAll(".pdfS .seg")).map(s=>[s.dataset.k,Array.from(s.querySelectorAll("button")).map(b=>b.dataset.v+":"+b.textContent.trim()+(b.classList.contains("on")?"*":""))]))')))
         LOG.append('col '+str(clk('.pdfS .seg[data-k="col"] [data-v="'+col+'"]'))); time.sleep(2)
+        time.sleep(2); _pv=ev('(function(){var pb=document.querySelector(".lpv .pbd");if(!pb)return -1;var P=pb.getBoundingClientRect();var sc=P.width/(pb.clientWidth||1);var c2=pb.classList.contains("c2");var gap=c2?(parseFloat(getComputedStyle(pb).columnGap)||0)*sc:0;var cw=c2?(P.width-gap)/2:P.width;var n=0;pb.querySelectorAll(".katex,table,pre,img").forEach(function(e){var r=e.getBoundingClientRect();if(!r.width)return;var R=(c2&&r.left>=P.left+cw+gap/2)?P.right:P.left+cw;if(r.right>R+1.5)n++});return n})()')
+        globals().setdefault('PVBAD',[])
+        if _pv!=0: PVBAD.append((j,col,_pv))
         shot('06_导出面板_col'+col)
         LOG.append('go '+str(clk('.pdfS [data-a="go"]')))
         for _ in range(60):
@@ -147,6 +150,7 @@ for _r,_,_fs in os.walk('out/pdf'):
             if _i==0: _im.save('out/render/'+_f[:-4]+'_p1.png')
             if _p: _iss.append((_i+1,_p)); _im.save('out/bad/'+_f[:-4]+'_p'+str(_i+1)+'.png')
         chk('PDF 不越界：'+_f+' '+(str(_iss) if _iss else ''),not _iss)
+chk('实时预览不越界 '+str(globals().get('PVBAD',[])),not globals().get('PVBAD',[]))
 chk('没有脚本执行错误',not any(x.startswith('EVAL ERR') for x in LOG))
 ST['errlog']=ev('__errText()')
 json.dump({'state':ST,'log':LOG},open('out/result.json','w'),ensure_ascii=False,indent=1)

@@ -61,6 +61,17 @@
       if (o.img === "2") { Array.from(tmp.querySelectorAll("h1,h2,h3,h4")).filter(h => /课堂截图/.test(h.textContent)).forEach(h => { const lv = +h.tagName[1]; let n = h.nextElementSibling; while (n && !(/^H[1-4]$/.test(n.tagName) && +n.tagName[1] <= lv) && n.tagName !== "HR") { const x = n; n = n.nextElementSibling; x.remove(); } h.remove(); }); }
     }
     function pvFit() { const f = lpv.querySelector(".lpvF"); const w = Math.floor(Math.min(f.getBoundingClientRect().width || 300, (lpv.getBoundingClientRect().width || 9999))) - 1; const k = Math.max(w, 120) / 794; lpv.querySelector(".pgx").style.transform = "scale(" + k + ")"; f.style.height = Math.round(1123 * k) + "px"; }
+    // v2.8.3：预览也做和导出相同的缩放（按本栏宽度缩小超宽的公式、表格），保证预览和导出一致
+    function pvFix() {
+      const pb = lpv.querySelector(".pbd"); if (!pb) return;
+      const c2 = pb.classList.contains("c2"); const gap = c2 ? (parseFloat(getComputedStyle(pb).columnGap) || 0) : 0;
+      const W = c2 ? (pb.clientWidth - gap) / 2 : pb.clientWidth; if (!(W > 0)) return;
+      pb.querySelectorAll(".katex-display>.katex,.fnBrk,table,pre,.katex").forEach(k => {
+        if (k.classList.contains("katex") && k.closest(".katex-display") && k.parentElement.classList.contains("katex-display") === false) return;
+        k.style.zoom = ""; if (k.parentElement.classList.contains("katex-display")) k.style.display = "inline-block";
+        const w = k.scrollWidth; if (w > W) k.style.zoom = (W / w * 0.98).toFixed(3);
+      });
+    }
     function pvPaint() {
       pvBody();
       const g = lpv.querySelector(".pgx"), mg = (MG[o.mg] || MG.n);
@@ -72,6 +83,7 @@
       g.querySelector("style").textContent = xcss(o).replace(/(^|\})([^{}@]+)\{/g, (x, a, sel) => a + sel.split(",").map(t => ".lpv .pgx " + t.trim()).join(",") + "{");
       lpv.querySelector(".lpvT span").textContent = "  " + parseFloat(fsv(o)) + " 磅 · " + ({ c: "紧凑", n: "标准", l: "宽松", x: "很宽" }[o.lh] || "标准") + "行距 · 公式" + ({ s: "小", n: "标准", l: "大" }[o.ms] || "标准");
       pvFit();
+      try { pvFix(); setTimeout(() => { try { pvFix(); } catch (e) { __err(e, "预览缩放") } }, 400); if (document.fonts) document.fonts.ready.then(() => { try { pvFix(); } catch (e) { __err(e, "预览缩放") } }); } catch (e) { __err(e, "预览缩放") }
     }
     const pg = m.querySelector(".pg");
     function paint() {
