@@ -68,8 +68,10 @@
     function pvFix() {
       let pb = lpv.querySelector(".pbd"); if (!pb) return;
       lastImg = null; pvBody(); pb = lpv.querySelector(".pbd"); pb.style.overflow = "hidden";
-      const c2 = pb.classList.contains("c2"); const gap = c2 ? (parseFloat(getComputedStyle(pb).columnGap) || 0) : 0;
-      __fnFitCore(pb, c2 ? (pb.clientWidth - gap) / 2 : pb.clientWidth);
+      // v2.8.5：用探针元素量出真实栏宽（clientWidth 含内边距，columnGap 可能是 normal，旧算法偏宽）
+      const pr = document.createElement("div"); pr.style.cssText = "width:100%;height:0;margin:0;padding:0;border:0";
+      pb.insertBefore(pr, pb.firstChild); const W = pr.offsetWidth; pr.remove();
+      __fnFitCore(pb, W);
     }
     function pvPaint() {
       pvBody();
