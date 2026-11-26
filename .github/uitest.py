@@ -70,7 +70,13 @@ $$E=mc^2+\\frac{1}{2}mv^2+mgh+\\frac{kQq}{r}+\\int_0^{T}P(t)\\,dt+\\sum_{i=1}^{n
 
 """ + "\\n\\n".join("【例%d】这是一段用来撑满页面的测试正文，检查双栏排版时文字是否铺满整页宽度，而不是缩在左上角。氮原子的孤对电子与苯环大π键共轭后，电子云向环上分散，碱性减弱。" % i for i in range(1,26))
 item={'title':'共轭影响碱性','bvid':'BV1test','p':1,'md':MD,'srt':'','kind':'note','time':int(time.time()*1000),'tag':'化学'}
-ev('localStorage.setItem("vtn_hist",JSON.stringify(['+json.dumps(item,ensure_ascii=False)+']));location.reload();1')
+import glob as _g
+ITEMS=[item]
+for _k,_p in enumerate(sorted(_g.glob('.github/fixtures/*.md'))):
+    _md=open(_p,encoding='utf-8').read(); _t=(re.findall(r'(?m)^#\s+(.+)',_md) or ['测试笔记'+str(_k)])[0][:30]
+    ITEMS.append({'title':_t,'bvid':'BVfix'+str(_k),'p':1,'md':_md,'srt':'','kind':'note','time':int(time.time()*1000)-(_k+1)*1000,'tag':'测试'})
+NOTE_N=len(ITEMS)
+ev('localStorage.setItem("vtn_hist",JSON.stringify('+json.dumps(ITEMS,ensure_ascii=False)+'));location.reload();1')
 time.sleep(10)
 ST={}
 def state(k): ST[k]=ev('JSON.stringify({w:innerWidth,h:innerHeight,dpr:devicePixelRatio,nav:(document.querySelector(".nav")||{getBoundingClientRect:()=>0}).getBoundingClientRect(),det:document.getElementById("pg-det").getBoundingClientRect(),detShow:document.getElementById("pg-det").classList.contains("show"),page:(document.querySelector(".page.on")||{}).id})')
@@ -81,19 +87,20 @@ LOG.append('click set '+str(clk('.nav button[data-p="set"]'))); time.sleep(2); s
 clk('.nav button[data-p="lib"]'); time.sleep(1)
 LOG.append('show '+str(ev('(function(){show(loadHist()[0]);return "ok"})()'))); time.sleep(4); state('det'); shot('04_横屏_笔记')
 LOG.append('click gen in det '+str(clk('.nav button[data-p="gen"]'))); time.sleep(2); state('det_then_gen'); shot('05_笔记中点生成')
-ev('(function(){show(loadHist()[0]);return 1})()'); time.sleep(3)
-for col in ['1','2']:
-    before=A('shell','ls','/sdcard/Download/VideoToNote/')
-    LOG.append('pdfbtn '+str(ev('(function(){var b=Array.from(document.querySelectorAll("#pg-det button")).find(x=>/导出 ?PDF/.test(x.textContent));if(!b)return "NOBTN";b.click();return "ok"})()'))); time.sleep(3)
-    LOG.append('segs '+str(ev('JSON.stringify(Array.from(document.querySelectorAll(".pdfS .seg")).map(s=>[s.dataset.k,Array.from(s.querySelectorAll("button")).map(b=>b.dataset.v+":"+b.textContent.trim()+(b.classList.contains("on")?"*":""))]))')))
-    LOG.append('col '+str(clk('.pdfS .seg[data-k="col"] [data-v="'+col+'"]'))); time.sleep(2)
-    shot('06_导出面板_col'+col)
-    LOG.append('go '+str(clk('.pdfS [data-a="go"]')))
-    for _ in range(60):
-        time.sleep(3)
-        if A('shell','ls','/sdcard/Download/VideoToNote/')!=before: break
-    time.sleep(4); shot('07_导出完成_col'+col)
-    ev('document.querySelectorAll(".vDlgM").forEach(x=>x.remove());1')
+for j in range(NOTE_N):
+    ev('(function(){show(loadHist()['+str(j)+']);return 1})()'); time.sleep(3)
+    for col in ['1','2']:
+        before=A('shell','ls','/sdcard/Download/VideoToNote/')
+        LOG.append('pdfbtn '+str(ev('(function(){var b=Array.from(document.querySelectorAll("#pg-det button")).find(x=>/导出 ?PDF/.test(x.textContent));if(!b)return "NOBTN";b.click();return "ok"})()'))); time.sleep(3)
+        LOG.append('segs '+str(ev('JSON.stringify(Array.from(document.querySelectorAll(".pdfS .seg")).map(s=>[s.dataset.k,Array.from(s.querySelectorAll("button")).map(b=>b.dataset.v+":"+b.textContent.trim()+(b.classList.contains("on")?"*":""))]))')))
+        LOG.append('col '+str(clk('.pdfS .seg[data-k="col"] [data-v="'+col+'"]'))); time.sleep(2)
+        shot('06_导出面板_col'+col)
+        LOG.append('go '+str(clk('.pdfS [data-a="go"]')))
+        for _ in range(60):
+            time.sleep(3)
+            if A('shell','ls','/sdcard/Download/VideoToNote/')!=before: break
+        time.sleep(4); shot('07_导出完成_col'+col)
+        ev('document.querySelectorAll(".vDlgM").forEach(x=>x.remove());1')
 A('pull','/sdcard/Download/VideoToNote/','out/pdf/')
 A('shell','settings','put','system','user_rotation','1'); time.sleep(5)
 ev('(function(){try{closeDet()}catch(e){};tab("gen");return 1})()'); time.sleep(2); state('port_gen'); shot('08_竖屏_生成')
@@ -114,8 +121,32 @@ chk('Store 读写删',ev('(function(){Store.set("vtn_uitest","1");var a=Store.ge
 chk('Store.json 坏数据不崩',ev('(function(){localStorage.setItem("vtn_uitest","{bad");var r=Store.json("vtn_uitest",42);Store.del("vtn_uitest");return r})()')==42)
 chk('错误日志能记录',ev('(function(){__err(new Error("UI自测"),"uitest");return __errText().indexOf("UI自测")>=0})()') is True)
 chk('设置里有错误日志入口',ev('!!document.getElementById("errRow")') is True)
-chk('笔记数据没丢',ev('loadHist().length')==1)
-chk('单栏和双栏都导出了 PDF',len([f for r,_,fs in os.walk('out/pdf') for f in fs if f.endswith('.pdf')])>=2)
+chk('笔记数据没丢',ev('loadHist().length')==NOTE_N)
+chk('每篇笔记单栏和双栏都导出了 PDF（共 '+str(2*NOTE_N)+' 个）',len([f for r,_,fs in os.walk('out/pdf') for f in fs if f.endswith('.pdf')])>=2*NOTE_N)
+# ---- 逐页扫描 PDF：左右边界外、双栏中缝有没有墨迹 ----
+import pypdfium2 as _pd, numpy as _np
+MGN=[16.0, 14.0, 16.0, 14.0]
+os.makedirs('out/render',exist_ok=True); os.makedirs('out/bad',exist_ok=True)
+for _r,_,_fs in os.walk('out/pdf'):
+    for _f in sorted(_fs):
+        if not _f.endswith('.pdf'): continue
+        _c2='_双栏' in _f; _doc=_pd.PdfDocument(os.path.join(_r,_f)); _iss=[]
+        for _i in range(len(_doc)):
+            _im=_doc[_i].render(scale=3).to_pil().convert('L'); _a=_np.array(_im); _H,_W=_a.shape; _px=_W/210.0; _ink=_a<140
+            _T=int(MGN[0]*_px); _B=_H-int(MGN[2]*_px); _L=int(MGN[3]*_px); _R=_W-int(MGN[1]*_px)
+            _band=_ink[_T:_B]; _y0=0
+            if _i==0:
+                _fr=_band[:int(70*_px),_L:_R].mean(1); _ln=_np.where(_fr>0.7)[0]
+                if len(_ln): _y0=int(_ln[0])+int(2*_px)
+            _p=[]
+            if _band[:,_R+int(1.5*_px):].any(): _p.append('右边界外')
+            if _band[:,:max(0,_L-int(1.5*_px))].any(): _p.append('左边界外')
+            if _c2:
+                _m=(_L+_R)//2; _g=_band[_y0:,_m-int(2*_px):_m+int(2*_px)]
+                if int(_g.any(1).sum())>3: _p.append('越过双栏中缝')
+            if _i==0: _im.save('out/render/'+_f[:-4]+'_p1.png')
+            if _p: _iss.append((_i+1,_p)); _im.save('out/bad/'+_f[:-4]+'_p'+str(_i+1)+'.png')
+        chk('PDF 不越界：'+_f+' '+(str(_iss) if _iss else ''),not _iss)
 chk('没有脚本执行错误',not any(x.startswith('EVAL ERR') for x in LOG))
 ST['errlog']=ev('__errText()')
 json.dump({'state':ST,'log':LOG},open('out/result.json','w'),ensure_ascii=False,indent=1)
