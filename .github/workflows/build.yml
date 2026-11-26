@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 83
-                  versionName "2.6.5"
+                  versionCode 84
+                  versionName "2.6.6"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -2430,7 +2430,6 @@ jobs:
           .acts{align-items:center!important}
           .acts>button,.acts>button.big,.acts>button.sec{height:48px!important;min-height:48px!important;margin:0!important;padding:0 22px!important;font-size:15px!important;display:inline-flex!important;align-items:center;justify-content:center;box-shadow:none!important;line-height:1}
           .acts[style*="column"]>button{width:100%}
-          .vDlg .bb button{height:44px!important;min-height:44px!important;margin:0!important;padding:0 18px!important;box-shadow:none!important}
           .pdfS .fsr button{height:44px!important;min-height:44px!important;width:56px;padding:0!important;margin:0!important;flex:0 0 auto}
           .pdfS .seg .chip5{height:40px!important;min-height:40px!important;margin:0!important}
           #v5pdf,#v5md,#v5prt{height:44px!important;min-height:44px!important;margin:0 8px 0 0!important;box-shadow:none!important}
@@ -3948,8 +3947,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.6.5";
+          const APP_VER = "2.6.6";
           const CHANGELOG = [
+            ["2.6.6", "代码整理第 2 部分：弹窗按钮的样式从 3 处合并为 1 处，外观和功能不变"],
             ["2.6.5", "代码整理第 1 部分：删除侧栏里已被覆盖、不再生效的样式，外观和功能不变"],
             ["2.6.4", "修复平板上打开笔记时左边被侧栏挡住一截；在笔记里点侧栏会先关掉笔记再切页"],
             ["2.6.3", "修复平板侧栏点“笔记库”“设置”没反应：侧栏提到最上层，并加独立的切页兜底"],
@@ -4729,9 +4729,8 @@ jobs:
               ".vDlgM{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;padding:24px;animation:vFade .18s}" +
               ".vDlg{background:var(--surface-container-high,#fff);color:var(--on-surface,#000);width:100%;max-width:340px;border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.28);animation:vPop .24s cubic-bezier(.34,1.56,.64,1);text-align:center}" +
               ".vDlg .tt{font-size:18px;font-weight:600;padding:22px 22px 6px}.vDlg .mm{font-size:15px;line-height:1.55;color:var(--on-surface-variant);padding:0 22px 20px;white-space:pre-line}" +
-              ".vDlg .bb{display:flex;border-top:1px solid var(--outline-variant,rgba(128,128,128,.22))}.vDlg .bb button{flex:1;height:50px;min-height:0;border:0;border-radius:0;background:transparent;font-size:16px;color:var(--primary,#111111);box-shadow:none}" +
-              ".vDlg .bb button+button{border-left:1px solid var(--outline-variant,rgba(128,128,128,.22));font-weight:600}.vDlg .bb button.dz{color:#FF3B30}.vDlg .bb button:active{background:rgba(128,128,128,.12);transform:none}" +
-              ".vDlg .bb button,.vDlg .bb button+button{border-radius:0!important;border-top:0!important;border-right:0!important;border-bottom:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}.vDlg .bb button+button{border-left:1px solid var(--outline-variant,rgba(128,128,128,.22))!important}.vDlg .bb button:active{background:rgba(128,128,128,.12)!important}" +
+              ".vDlg .bb{display:flex;border-top:1px solid var(--outline-variant,rgba(128,128,128,.22))}.vDlg .bb button{flex:1;height:44px!important;min-height:44px!important;margin:0!important;padding:0 18px!important;border:0!important;border-radius:0!important;outline:0!important;background:transparent!important;font-size:16px;color:var(--primary,#111111);box-shadow:none!important}" +
+              ".vDlg .bb button+button{border-left:1px solid var(--outline-variant,rgba(128,128,128,.22))!important;font-weight:600}.vDlg .bb button.dz{color:#FF3B30}.vDlg .bb button:active{background:rgba(128,128,128,.12)!important;transform:none}" +
               "#undoBar{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translate(-50%,40px);opacity:0;pointer-events:none;z-index:9997;display:flex;align-items:center;gap:6px;background:#2c2c2e;color:#fff;border-radius:16px;padding:6px 6px 6px 18px;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.3);transition:transform .34s cubic-bezier(.34,1.56,.64,1),opacity .2s;max-width:92vw}" +
               "#undoBar.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}#undoBar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}" +
               "#undoBar button{background:rgba(90,200,250,.16);border:0;color:#5AC8FA;font-weight:600;font-size:15px;padding:0 16px;height:38px;min-height:0;border-radius:12px;flex:none}" +
