@@ -104,6 +104,43 @@ for j in range(NOTE_N):
             if A('shell','ls','/sdcard/Download/VideoToNote/')!=before: break
         time.sleep(4); shot('07_导出完成_col'+col)
         ev('document.querySelectorAll(".vDlgM").forEach(x=>x.remove());1')
+# ===== v2.8.6：GPAI 配图（用本机模拟出图服务跑完整流程）=====
+import threading,http.server,io as _io,base64 as _b64
+from PIL import Image as _I, ImageDraw as _D
+_bb=_io.BytesIO(); _im=_I.new('RGB',(640,400),'white'); _dd=_D.Draw(_im); _dd.rectangle([40,40,600,360],outline=(30,90,200),width=10); _dd.ellipse([220,120,420,280],fill=(80,160,255)); _im.save(_bb,'PNG'); PNG=_bb.getvalue()
+SEEN=[]; AIR={}
+class _H(http.server.BaseHTTPRequestHandler):
+    def log_message(s,*a): pass
+    def _j(s,o,c=200):
+        b=json.dumps(o).encode(); s.send_response(c); s.send_header('Content-Type','application/json'); s.send_header('Content-Length',str(len(b))); s.end_headers(); s.wfile.write(b)
+    def do_POST(s):
+        n=int(s.headers.get('Content-Length') or 0); body=json.loads(s.rfile.read(n) or b'{}'); SEEN.append(['POST',s.path,s.headers.get('X-API-Key'),body])
+        if s.headers.get('X-API-Key')!='testkey': return s._j({'error':'bad key'},401)
+        v='v%d'%len(SEEN); s._j({'variant_id':v,'status':'queued','status_url':'/img/jobs/'+v})
+    def do_GET(s):
+        SEEN.append(['GET',s.path])
+        if s.path.startswith('/img/files/'):
+            s.send_response(200); s.send_header('Content-Type','image/png'); s.send_header('Content-Length',str(len(PNG))); s.end_headers(); s.wfile.write(PNG); return
+        if s.path.startswith('/img/jobs/'):
+            k=sum(1 for x in SEEN if x[:2]==['GET',s.path]); v=s.path.split('/')[-1]
+            return s._j({'status':'generating','variant_id':v} if k<2 else {'status':'completed','variant_id':v,'local_url':'/img/files/'+v+'.png'})
+        s._j({},404)
+_srv=http.server.ThreadingHTTPServer(('127.0.0.1',8790),_H); threading.Thread(target=_srv.serve_forever,daemon=True).start()
+A('reverse','tcp:8790','tcp:8790')
+_jb=_io.BytesIO(); _I.new('RGB',(640,360),(40,130,70)).save(_jb,'JPEG')
+AIR['写原截图']=ev('Native.imgWriteB64("uit_shot.jpg",'+json.dumps(_b64.b64encode(_jb.getvalue()).decode())+')')
+_md='# 配图测试\n\n光合作用分为光反应和暗反应两个阶段。\n\n![图1 光合作用板书](img/uit_shot.jpg)\n\n结尾。'
+ev('(function(){var it={title:"配图测试",bvid:"BVai",p:1,md:'+json.dumps(_md,ensure_ascii=False)+',srt:"",kind:"note",time:Date.now(),tag:"生物",imgs:["uit_shot.jpg"]};var h=loadHist();h.unshift(it);Store.set("vtn_hist",JSON.stringify(h));show(it);Store.set("vtn_aifig",JSON.stringify({base:"http://127.0.0.1:8790",key:"testkey"}));return 1})()'); time.sleep(3)
+AIR['入口']=ev('JSON.stringify({btn:!!document.getElementById("aiFigBtn"),bar:!!document.querySelector("#preview .aiBar"),row:!!document.getElementById("aiRow")})')
+shot('09_配图_出图前')
+AIR['出图张数']=ev('__aiFig.genAll({auto:true})'); time.sleep(3)
+_q='JSON.stringify({src:(document.querySelector("#preview figure.shot img")||{}).src||"",w:(document.querySelector("#preview figure.shot img")||{}).naturalWidth||0,on:((document.querySelector("#preview .aiBar .on")||{}).textContent||""),saved:loadHist()[0].md.indexOf("img/ai_")>=0,pdf:render(curMd()).indexOf("img/ai_")>=0})'
+AIR['换成配图']=ev(_q); shot('09_配图_GPAI配图')
+clk('#preview .aiBar [data-k="o"]'); time.sleep(2); AIR['切回原截图']=ev(_q); shot('10_配图_切回原截图')
+clk('#preview .aiBar [data-k="a"]'); time.sleep(2); AIR['再切配图']=ev(_q)
+AIR['请求']=SEEN[:1]
+ev('(function(){var h=loadHist().filter(function(x){return x.bvid!=="BVai"});Store.set("vtn_hist",JSON.stringify(h));return 1})()')
+LOG.append('AIR '+json.dumps(AIR,ensure_ascii=False)[:1500])
 A('pull','/sdcard/Download/VideoToNote/','out/pdf/')
 A('shell','settings','put','system','user_rotation','1'); time.sleep(5)
 ev('(function(){try{closeDet()}catch(e){};tab("gen");return 1})()'); time.sleep(2); state('port_gen'); shot('08_竖屏_生成')
@@ -151,6 +188,14 @@ for _r,_,_fs in os.walk('out/pdf'):
             if _p: _iss.append((_i+1,_p)); _im.save('out/bad/'+_f[:-4]+'_p'+str(_i+1)+'.png')
         chk('PDF 不越界：'+_f+' '+(str(_iss) if _iss else ''),not _iss)
 chk('实时预览不越界 '+str(globals().get('PVBAD',[])),not globals().get('PVBAD',[]))
+def _aj(k):
+    try: return json.loads(AIR.get(k) or '{}')
+    except Exception: return {}
+chk('GPAI 配图入口（工具栏按钮、图下切换条、设置项）',_aj('入口')=={'btn':True,'bar':True,'row':True})
+chk('GPAI 配图：请求带密钥、生物用 diagram、提示词含上下文',bool(AIR.get('请求')) and AIR['请求'][0][2]=='testkey' and AIR['请求'][0][3].get('engine')=='diagram' and '光合作用' in AIR['请求'][0][3].get('prompt',''))
+chk('GPAI 配图：生成 1 张并显示、已保存、导出也用它',AIR.get('出图张数')==1 and 'ai_' in _aj('换成配图').get('src','') and _aj('换成配图').get('w',0)>0 and _aj('换成配图').get('saved') is True and _aj('换成配图').get('pdf') is True and _aj('换成配图').get('on')=='GPAI 配图')
+chk('GPAI 配图：可切回原截图',_aj('切回原截图').get('src','').endswith('uit_shot.jpg') and _aj('切回原截图').get('w',0)>0 and _aj('切回原截图').get('saved') is False and _aj('切回原截图').get('on')=='原截图')
+chk('GPAI 配图：可再切回配图',('ai_' in _aj('再切配图').get('src','')) and _aj('再切配图').get('saved') is True)
 chk('没有脚本执行错误',not any(x.startswith('EVAL ERR') for x in LOG))
 ST['errlog']=ev('__errText()')
 json.dump({'state':ST,'log':LOG},open('out/result.json','w'),ensure_ascii=False,indent=1)
