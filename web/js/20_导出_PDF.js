@@ -61,16 +61,31 @@
       if (o.img === "2") { Array.from(tmp.querySelectorAll("h1,h2,h3,h4")).filter(h => /课堂截图/.test(h.textContent)).forEach(h => { const lv = +h.tagName[1]; let n = h.nextElementSibling; while (n && !(/^H[1-4]$/.test(n.tagName) && +n.tagName[1] <= lv) && n.tagName !== "HR") { const x = n; n = n.nextElementSibling; x.remove(); } h.remove(); }); }
     }
     function pvFit() { const f = lpv.querySelector(".lpvF"); const w = Math.floor(Math.min(f.getBoundingClientRect().width || 300, (lpv.getBoundingClientRect().width || 9999))) - 1; const k = Math.max(w, 120) / 794; lpv.querySelector(".pgx").style.transform = "scale(" + k + ")"; f.style.height = Math.round(1123 * k) + "px"; }
-    // v2.8.3：预览也做和导出相同的缩放（按本栏宽度缩小超宽的公式、表格），保证预览和导出一致
+    // v2.8.3：预览也做和导出相同的复查——按屏幕上的实际位置量，超出本栏的公式、表格、图片整体缩小
     function pvFix() {
       const pb = lpv.querySelector(".pbd"); if (!pb) return;
-      const c2 = pb.classList.contains("c2"); const gap = c2 ? (parseFloat(getComputedStyle(pb).columnGap) || 0) : 0;
-      const W = c2 ? (pb.clientWidth - gap) / 2 : pb.clientWidth; if (!(W > 0)) return;
-      pb.querySelectorAll(".katex-display>.katex,.fnBrk,table,pre,.katex").forEach(k => {
-        if (k.classList.contains("katex") && k.closest(".katex-display") && k.parentElement.classList.contains("katex-display") === false) return;
-        k.style.zoom = ""; if (k.parentElement.classList.contains("katex-display")) k.style.display = "inline-block";
-        const w = k.scrollWidth; if (w > W) k.style.zoom = (W / w * 0.98).toFixed(3);
-      });
+      const SEL = ".katex-display,table,pre,img,figure,.katex";
+      pb.querySelectorAll("[data-pv]").forEach(e => { e.style.transform = ""; e.style.transformOrigin = ""; e.removeAttribute("data-pv"); });
+      for (let pass = 0; pass < 4; pass++) {
+        const P = pb.getBoundingClientRect(); if (!P.width) return;
+        const sc = P.width / (pb.clientWidth || P.width);
+        const c2 = pb.classList.contains("c2"); const gap = c2 ? (parseFloat(getComputedStyle(pb).columnGap) || 0) * sc : 0;
+        const cw = c2 ? (P.width - gap) / 2 : P.width;
+        let hit = 0;
+        pb.querySelectorAll(SEL).forEach(e => {
+          const out = e.parentElement && e.parentElement.closest(".katex-display,table,pre,figure");
+          if (out && pb.contains(out)) return;
+          if (e.classList.contains("katex") && e.parentElement.closest(".katex")) return;
+          const r = e.getBoundingClientRect(); if (!r.width) return;
+          const R = (c2 && r.left >= P.left + cw + gap / 2) ? P.right : P.left + cw;
+          let right = r.right; e.querySelectorAll(".katex,.base,td,th").forEach(x => { const q = x.getBoundingClientRect(); if (q.right > right) right = q.right; });
+          if (right <= R + 1) return;
+          if (getComputedStyle(e).display === "inline") e.style.display = "inline-block";
+          const k = Math.max(0.3, (parseFloat(e.dataset.pv || "1")) * (R - r.left) / (right - r.left) * 0.985);
+          e.dataset.pv = k; e.style.transformOrigin = "left top"; e.style.transform = "scale(" + k.toFixed(4) + ")"; hit++;
+        });
+        if (!hit) break;
+      }
     }
     function pvPaint() {
       pvBody();
