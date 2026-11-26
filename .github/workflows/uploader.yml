@@ -532,7 +532,13 @@ jobs:
           import android.provider.Settings;
           import org.json.JSONArray;
           import org.json.JSONObject;
+          import android.util.Base64;
           import java.io.ByteArrayOutputStream;
+          import java.io.FileInputStream;
+          import java.io.OutputStream;
+          import java.net.URLEncoder;
+          import java.text.SimpleDateFormat;
+          import java.util.Date;
           import java.io.File;
           import java.io.FileOutputStream;
           import java.io.InputStream;
@@ -544,9 +550,9 @@ jobs:
           public class BuildService extends Service {
               static volatile boolean running = false;
               static final List<String[]> EV = new ArrayList<String[]>();
-              String tok, repo, sha, pkg, dsh;
+              String tok, repo, sha, pkg, dsh, up, br, tg;
               int toMin, code;
-              boolean auto, only, silent;
+              boolean auto, only, silent, dry;
               PowerManager.WakeLock wl;
               NotificationManager nm;
 
@@ -607,6 +613,7 @@ jobs:
                       tok = o.optString("tok"); repo = o.optString("repo"); sha = o.optString("sha");
                       pkg = o.optString("pkg"); dsh = o.optString("dsh");
                       toMin = o.optInt("to", 25); auto = o.optBoolean("auto", true); only = o.optBoolean("only", false); silent = o.optBoolean("silent", true);
+                      up = o.optString("up"); br = o.optString("br", "main"); tg = o.optString("tg"); dry = o.optBoolean("dry", false);
                   } catch (Exception e) { running = false; stopForeground(true); stopSelf(); return START_NOT_STICKY; }
                   PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
                   wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "vtn:build");
@@ -644,9 +651,99 @@ jobs:
                   return read(code >= 400 ? c.getErrorStream() : c.getInputStream());
               }
 
+              String ghm(String method, String path, String body) throws Exception {
+                  Exception last = null;
+                  for (int t = 0; t < 4; t++) {
+                      if (t > 0) { emit("w", "网络不稳，" + (t * 3) + " 秒后重试（" + last.getMessage() + "）"); Thread.sleep(t * 3000L); }
+                      try {
+                          HttpURLConnection c = (HttpURLConnection) new URL("https://api.github.com" + path).openConnection();
+                          c.setConnectTimeout(20000); c.setReadTimeout(60000);
+                          c.setRequestMethod(method);
+                          c.setRequestProperty("Accept", "application/vnd.github+json");
+                          c.setRequestProperty("User-Agent", "vtn-uploader");
+                          if (tok != null && tok.length() > 0) c.setRequestProperty("Authorization", "token " + tok);
+                          if (body != null) {
+                              c.setDoOutput(true);
+                              c.setRequestProperty("Content-Type", "application/json");
+                              OutputStream os = c.getOutputStream();
+                              try { os.write(body.getBytes("UTF-8")); } finally { os.close(); }
+                          }
+                          code = c.getResponseCode();
+                          return read(code >= 400 ? c.getErrorStream() : c.getInputStream());
+                      } catch (Exception e) { last = e; }
+                  }
+                  throw new Exception("连不上 GitHub（" + last.getMessage() + "），请检查网络/VPN");
+              }
+
+              static String enc(String p) throws Exception {
+                  StringBuilder sb = new StringBuilder();
+                  for (String s : p.split("/")) { if (s.length() == 0) continue; if (sb.length() > 0) sb.append('/'); sb.append(URLEncoder.encode(s, "UTF-8").replace("+", "%20")); }
+                  return sb.toString();
+              }
+
+              String upload() throws Exception {
+                  emit("step", "0");
+                  File f = new File(up);
+                  status("上传中", f.getName() + "，可以切到后台");
+                  if (!f.exists() || f.length() == 0) throw new Exception("读不到文件，或文件是空的");
+                  FileInputStream in = new FileInputStream(f);
+                  ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                  try { byte[] buf = new byte[16384]; int n; while ((n = in.read(buf)) > 0) bo.write(buf, 0, n); } finally { in.close(); }
+                  String content = Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
+                  String b = URLEncoder.encode(br, "UTF-8");
+                  String fp = "/repos/" + repo + "/contents/" + enc(tg);
+                  emit("d", "对比线上文件…");
+                  String body = ghm("GET", fp + "?ref=" + b, null);
+                  JSONObject online = null;
+                  if (code == 200) online = new JSONObject(body);
+                  else if (code == 404) {
+                      ghm("GET", "/repos/" + repo + "/git/ref/heads/" + b, null);
+                      if (code == 404) throw new Exception("仓库或分支 '" + br + "' 不存在");
+                      emit("w", "线上没有此文件，将新建");
+                  }
+                  else if (code == 401 || code == 403) throw new Exception("token 无效或没权限（HTTP " + code + "）");
+                  else throw new Exception("读取线上文件失败（HTTP " + code + "）");
+                  if (online != null && online.optString("content").replaceAll("\\s", "").equals(content)) {
+                      emit("step", "0|done"); emit("st", "无需上传|线上 build.yml 和这个文件完全一致"); emit("g", "内容一致，未上传");
+                      return null;
+                  }
+                  String msg = "更新 build.yml - " + new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date());
+                  emit("d", "提交说明：" + msg);
+                  if (dry) { emit("st", "试运行完成|未实际提交"); return null; }
+                  for (int at = 0; at < 2; at++) {
+                      JSONObject q = new JSONObject();
+                      q.put("message", msg); q.put("content", content); q.put("branch", br);
+                      if (online != null) q.put("sha", online.optString("sha"));
+                      String rb = ghm("PUT", fp, q.toString());
+                      if (code == 200 || code == 201) {
+                          JSONObject cm = new JSONObject(rb).getJSONObject("commit");
+                          String s = cm.optString("sha");
+                          emit("g", "上传成功，提交 " + s.substring(0, Math.min(7, s.length())));
+                          emit("link", "查看提交|" + cm.optString("html_url"));
+                          return s;
+                      }
+                      String det = "";
+                      try { det = new JSONObject(rb).optString("message"); } catch (Exception ignored) {}
+                      if ((code == 409 || code == 422) && at == 0) {
+                          String r2 = ghm("GET", fp + "?ref=" + b, null);
+                          if (code == 200) { online = new JSONObject(r2); emit("w", "线上文件刚被改过，重试一次"); continue; }
+                      }
+                      if (code == 403 && det.toLowerCase().contains("personal access token")) throw new Exception("token 没有写权限：需要 Contents 和 Workflows 读写权限");
+                      if (det.toLowerCase().contains("workflow")) throw new Exception("token 缺 workflow 权限");
+                      throw new Exception("上传失败（HTTP " + code + "）：" + det);
+                  }
+                  throw new Exception("上传失败");
+              }
+
               static String p2(long n) { return n < 10 ? "0" + n : "" + n; }
 
               void work() throws Exception {
+                  if (up != null && up.length() > 0) {
+                      String s = upload();
+                      if (s == null) return;
+                      sha = s;
+                      emit("step", "1"); status("等待编译", "已上传，可以切到后台");
+                  }
                   if (!only) {
                       emit("step", "1");
                       long t0 = System.currentTimeMillis(), end = t0 + toMin * 60000L;
@@ -1251,7 +1348,7 @@ jobs:
            say(m,t=="e"?"r":t=="w"?"y":t=="g"?"g":"d");if(t=="e")st("出错了",m)};
           function adbCheck(){$("adbv").textContent="检查中…（如有弹窗请允许）";App.adbTest()}
           function bg(){try{$("popv").innerHTML=App.canPop()?'<span class="pill ok">已开启</span>':'<span class="pill no">未开启</span>';$("batv").innerHTML=App.batOk()?'<span class="pill ok">是</span>':'<span class="pill no">否</span>'}catch(e){}}
-          function svcStart(o){if(!App.startWatch(JSON.stringify({tok:LS.getItem("vtn_tok")||"",repo:repo(),sha:o.sha||"",pkg:$("pkg").value.trim(),dsh:dshPkg(),to:+$("to").value||25,auto:!!o.auto,only:!!o.only,silent:$("silent").checked})))throw new Fail("后台任务已在运行，或启动失败");
+          function svcStart(o){if(!App.startWatch(JSON.stringify({tok:LS.getItem("vtn_tok")||"",repo:repo(),sha:o.sha||"",up:o.up||"",br:o.br||"main",tg:o.tg||"",dry:!!o.dry,pkg:$("pkg").value.trim(),dsh:dshPkg(),to:+$("to").value||25,auto:!!o.auto,only:!!o.only,silent:$("silent").checked})))throw new Fail("后台任务已在运行，或启动失败");
            say("已交给后台服务，可以离开本 App","d");if(!App.canPop())say("没开「显示在其他应用上层」，完成时只发通知，点通知进入 DSH GO（设置页可开启）","y")}
           async function downloadLatest(){if(!App.hasAccess()){App.requestAccess();throw new Fail("需要文件权限才能保存 APK")}
            step(2);st("下载中","已交给后台，可以切到别的 App");svcStart({auto:true,only:true})}
@@ -1264,27 +1361,8 @@ jobs:
            const bin=atob(content),raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);
            const text=new TextDecoder().decode(raw);say("源文件："+info.name+"（"+kb(raw.length)+"）");
            if(!/^name:\s*\S/m.test(text)||!/^jobs:/m.test(text))throw new Fail("这个文件不像 GitHub Actions 工作流（缺 name: 或 jobs:）");
-           const fp="/repos/"+R+"/contents/"+tg.split("/").map(encodeURIComponent).join("/");
-           st("对比线上文件");let r=await gh(fp+"?ref="+encodeURIComponent(br)),online=null;
-           if(r.s==200)online=r.j;
-           else if(r.s==404){const b=await gh("/repos/"+R+"/git/ref/heads/"+encodeURIComponent(br));if(b.s==404)throw new Fail("仓库或分支 '"+br+"' 不存在");say("线上没有此文件，将新建","y")}
-           else if(r.s==401||r.s==403)throw new Fail("token 无效或没权限（HTTP "+r.s+"）");
-           else if(r.s==0)throw new Fail("连不上 GitHub，请检查网络/VPN");
-           else throw new Fail("读取线上文件失败（HTTP "+r.s+"）");
-           if(online&&(online.content||"").replace(/\s/g,"")===content){step(0,"done");st("无需上传","线上 build.yml 和这个文件完全一致");say("内容一致，未上传","g");return}
-           const now=new Date(),msg="更新 build.yml - "+now.getFullYear()+"-"+p2(now.getMonth()+1)+"-"+p2(now.getDate())+" "+p2(now.getHours())+":"+p2(now.getMinutes());
-           say("提交说明："+msg,"d");
-           if($("dry").checked){st("试运行完成","未实际提交");return}
-           st("上传中");let res=null;
-           for(let a=0;a<2;a++){const body={message:msg,content,branch:br};if(online)body.sha=online.sha;
-            r=await gh(fp,{method:"PUT",body});if(r.s==200||r.s==201){res=r.j;break}
-            const det=r.j&&r.j.message||"";
-            if((r.s==409||r.s==422)&&a==0){const r2=await gh(fp+"?ref="+encodeURIComponent(br));if(r2.s==200){online=r2.j;say("线上文件刚被改过，重试一次","y");continue}}
-            if(r.s==403&&/personal access token/i.test(det))throw new Fail("token 没有写权限：需要 Contents 和 Workflows 读写权限");
-            if(/workflow/i.test(det))throw new Fail("token 缺 workflow 权限");
-            throw new Fail("上传失败（HTTP "+r.s+"）："+det)}
-           const sha=res.commit.sha;say("上传成功，提交 "+sha.slice(0,7),"g");link("查看提交",res.commit.html_url);
-           step(1);st("等待编译","已交给后台，可以切走，完成后自动下载并打开 DSH GO");svcStart({sha,auto:$("auto").checked})}
+           if(!App.hasAccess()){App.requestAccess();throw new Fail("需要文件权限")}
+           st("上传中","已交给后台，可以切走，完成后自动编译、下载");svcStart({up:path,br,tg,dry:$("dry").checked,auto:$("auto").checked})}
           theme();tab(+LS.getItem("vtn_tab")||0);loadOpt();showTok();loadFiles(false);showInst();loadApps();bg();if(App.svcRunning()){busy=true;$("go").disabled=true}JSON.parse(App.events()).forEach(e=>onNative(e[0],e[1]));quick();
           </script></body></html>
           EOF_H
