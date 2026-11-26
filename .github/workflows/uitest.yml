@@ -28,7 +28,7 @@ jobs:
           T="${{ inputs.tag }}"; if [ -z "$T" ]; then T=$(gh release list -L 1 --json tagName -q '.[0].tagName'); fi
           gh release download "$T" -p '*.apk' -O app.apk
           mkdir -p out; echo "$T" > out/tag.txt
-      - run: pip install websocket-client pypdfium2 numpy
+      - run: pip install websocket-client pypdfium2 numpy pillow
       - uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
