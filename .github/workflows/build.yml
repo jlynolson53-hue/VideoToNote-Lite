@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 84
-                  versionName "2.6.6"
+                  versionCode 85
+                  versionName "2.6.7"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -1858,9 +1858,15 @@ jobs:
                               Intent i = new Intent(Intent.ACTION_VIEW); i.setDataAndType(Uri.parse(p), "application/pdf");
                               i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                               boolean ok = false;
-                              for (String pk : new String[]{"com.hihonor.hnoffice", "com.huawei.hidisk", "com.hihonor.filemanager"}) {
-                                  try { Intent j = new Intent(i); j.setPackage(pk); startActivity(j); ok = true; break; } catch (Exception ig) { }
-                              }
+                              try {
+                                  for (android.content.pm.ResolveInfo ri : getPackageManager().queryIntentActivities(i, 0)) {
+                                      String pk = ri.activityInfo.packageName, nm = ri.activityInfo.name;
+                                      if (pk.contains("hnoffice") || pk.contains("wps") || nm.toLowerCase().contains("pdf")) {
+                                          if (nm.toLowerCase().contains("save") || pk.contains("filemanager") || pk.contains("hidisk")) continue;
+                                          Intent j = new Intent(i); j.setClassName(pk, nm); startActivity(j); ok = true; break;
+                                      }
+                                  }
+                              } catch (Exception ig) { }
                               if (!ok) startActivity(Intent.createChooser(i, "打开 PDF"));
                           } catch (Exception ignored) { }
                       });
@@ -3947,8 +3953,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.6.6";
+          const APP_VER = "2.6.7";
           const CHANGELOG = [
+            ["2.6.7", "修复导出 PDF 后点“打开”跳到文件管理的“保存至”界面：改为只找真正能阅读 PDF 的应用（优先荣耀文档），找不到就弹出应用选择"],
             ["2.6.6", "代码整理第 2 部分：弹窗按钮的样式从 3 处合并为 1 处，外观和功能不变"],
             ["2.6.5", "代码整理第 1 部分：删除侧栏里已被覆盖、不再生效的样式，外观和功能不变"],
             ["2.6.4", "修复平板上打开笔记时左边被侧栏挡住一截；在笔记里点侧栏会先关掉笔记再切页"],
