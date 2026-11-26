@@ -449,6 +449,15 @@ jobs:
                   }
           
                   @JavascriptInterface
+                  public void adbTest() {
+                      new Thread(new Runnable() { public void run() {
+                          AdbInstall.setKeyDir(getFilesDir().getAbsolutePath());
+                          AdbInstall.Result r = AdbInstall.test(60000);
+                          js("adb", "{\"ok\":" + r.ok() + ",\"msg\":" + JSONObject.quote(r.message) + "}");
+                      }}).start();
+                  }
+
+                  @JavascriptInterface
                   public boolean openApp(String pkg) {
                       try {
                           Intent i = getPackageManager().getLaunchIntentForPackage(pkg);
@@ -537,7 +546,7 @@ jobs:
               static final List<String[]> EV = new ArrayList<String[]>();
               String tok, repo, sha, pkg, dsh;
               int toMin, code;
-              boolean auto, only;
+              boolean auto, only, silent;
               PowerManager.WakeLock wl;
               NotificationManager nm;
 
@@ -597,7 +606,7 @@ jobs:
                       JSONObject o = new JSONObject(it.getStringExtra("cfg"));
                       tok = o.optString("tok"); repo = o.optString("repo"); sha = o.optString("sha");
                       pkg = o.optString("pkg"); dsh = o.optString("dsh");
-                      toMin = o.optInt("to", 25); auto = o.optBoolean("auto", true); only = o.optBoolean("only", false);
+                      toMin = o.optInt("to", 25); auto = o.optBoolean("auto", true); only = o.optBoolean("only", false); silent = o.optBoolean("silent", true);
                   } catch (Exception e) { running = false; stopForeground(true); stopSelf(); return START_NOT_STICKY; }
                   PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
                   wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "vtn:build");
@@ -721,7 +730,7 @@ jobs:
                   emit("dl", f.getAbsolutePath());
                   emit("step", "3");
                   emit("st", "下载完成|" + title);
-                  launch(title);
+                  if (!installIfNewer(f, title)) launch(title);
               }
 
               File fetch(String url, String name) throws Exception {
@@ -787,6 +796,54 @@ jobs:
                   } catch (Exception ignored) {}
               }
 
+              boolean installIfNewer(File f, String title) {
+                  if (!silent) return false;
+                  try {
+                      PackageManager pmg = getPackageManager();
+                      PackageInfo ai = pmg.getPackageArchiveInfo(f.getPath(), 0);
+                      if (ai == null) return false;
+                      PackageInfo ii = null;
+                      try { ii = pmg.getPackageInfo(pkg, 0); } catch (Exception ignored) {}
+                      if (ii != null && MainActivity.vc(ai) <= MainActivity.vc(ii)) {
+                          emit("g", "已是最新（已装 " + ii.versionName + "），跳过安装");
+                          emit("step", "4"); emit("st", "已是最新|" + ii.versionName);
+                          result("视频笔记已是最新", ii.versionName, getPackageManager().getLaunchIntentForPackage(pkg));
+                          return true;
+                      }
+                      status("静默安装中", "首次需在系统弹窗允许 USB 调试");
+                      emit("d", "尝试静默安装 " + ai.versionName + "（首次连接请在弹窗勾选「始终允许」）");
+                      AdbInstall.setKeyDir(getFilesDir().getAbsolutePath());
+                      AdbInstall.Result r = AdbInstall.install(f.getAbsolutePath(), 60000);
+                      if (r.ok()) {
+                          emit("g", "已静默安装 " + ai.versionName);
+                          emit("inst", title); emit("step", "4"); emit("st", "安装完成|" + title);
+                          openVtn(title, "视频笔记已更新");
+                          return true;
+                      }
+                      if (r.code == AdbInstall.DOWNGRADE) {
+                          emit("g", "已是最新，跳过安装"); emit("step", "4"); emit("st", "已是最新|" + title);
+                          openVtn(title, "视频笔记已是最新");
+                          return true;
+                      }
+                      if (r.code == AdbInstall.INCOMPAT) emit("w", "签名不一致（签名文件变了？），改走 DSH GO");
+                      else emit("w", "静默安装不可用：" + r.message + "，改走 DSH GO");
+                      return false;
+                  } catch (Exception e) {
+                      emit("w", "静默安装出错：" + e.getMessage() + "，改走 DSH GO");
+                      return false;
+                  }
+              }
+
+              void openVtn(String title, String head) {
+                  Intent i = getPackageManager().getLaunchIntentForPackage(pkg);
+                  if (i == null) { result(head, title, null); return; }
+                  i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                  if (MainActivity.visible || Settings.canDrawOverlays(this)) {
+                      try { startActivity(i); emit("g", "已打开视频笔记"); } catch (Exception e) { emit("w", "打开视频笔记失败：" + e.getMessage()); }
+                  } else emit("w", "没开悬浮窗权限，已发通知，点通知打开视频笔记");
+                  result(head, "点这里打开 " + title, i);
+              }
+
               void launch(String title) {
                   Intent i = (dsh == null || dsh.length() == 0) ? null : getPackageManager().getLaunchIntentForPackage(dsh);
                   if (i == null) {
@@ -805,6 +862,221 @@ jobs:
               }
           }
           EOF_V
+
+          cat > 'app/src/main/java/com/vtn/uploader/AdbInstall.java' <<'EOF_D'
+          package com.vtn.uploader;
+
+          import android.util.Base64;
+          import java.io.ByteArrayOutputStream;
+          import java.io.DataInputStream;
+          import java.io.File;
+          import java.io.FileInputStream;
+          import java.io.FileOutputStream;
+          import java.io.OutputStream;
+          import java.math.BigInteger;
+          import java.net.InetSocketAddress;
+          import java.net.Socket;
+          import java.net.SocketTimeoutException;
+          import java.nio.ByteBuffer;
+          import java.nio.ByteOrder;
+          import java.security.KeyFactory;
+          import java.security.KeyPair;
+          import java.security.KeyPairGenerator;
+          import java.security.PrivateKey;
+          import java.security.interfaces.RSAPublicKey;
+          import java.security.spec.PKCS8EncodedKeySpec;
+          import java.security.spec.X509EncodedKeySpec;
+          import javax.crypto.Cipher;
+
+          public class AdbInstall {
+              public static final int OK = 0, NO_CONN = 1, NO_AUTH = 2, DOWNGRADE = 3, INCOMPAT = 4, FAIL = 5;
+              static final int CNXN = 0x4e584e43, AUTH = 0x48545541, OPEN = 0x4e45504f, OKAY = 0x59414b4f, CLSE = 0x45534c43, WRTE = 0x45545257;
+              static final byte[] SHA1_DI = {0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04, 0x14};
+              static final String TMP = "/data/local/tmp/vtn-up.apk";
+              static String keyDir = ".";
+              static String host = "127.0.0.1";
+              static int port = 5555;
+
+              public static void setKeyDir(String d) { keyDir = d; }
+
+              public static class Result {
+                  public final int code;
+                  public final String message;
+                  public final String output;
+                  Result(int c, String m, String o) { code = c; message = m; output = o == null ? "" : o; }
+                  public boolean ok() { return code == OK; }
+              }
+
+              static class AdbEx extends Exception {
+                  final int code;
+                  AdbEx(int c, String m) { super(m); code = c; }
+              }
+
+              static class Msg { int cmd, a0, a1; byte[] data; }
+
+              static class Conn {
+                  Socket s; DataInputStream in; OutputStream out;
+                  void send(int cmd, int a0, int a1, byte[] d) throws Exception {
+                      if (d == null) d = new byte[0];
+                      int sum = 0;
+                      for (byte x : d) sum += x & 0xff;
+                      ByteBuffer b = ByteBuffer.allocate(24 + d.length).order(ByteOrder.LITTLE_ENDIAN);
+                      b.putInt(cmd); b.putInt(a0); b.putInt(a1); b.putInt(d.length); b.putInt(sum); b.putInt(~cmd);
+                      b.put(d);
+                      out.write(b.array()); out.flush();
+                  }
+                  Msg read() throws Exception {
+                      byte[] h = new byte[24];
+                      in.readFully(h);
+                      ByteBuffer b = ByteBuffer.wrap(h).order(ByteOrder.LITTLE_ENDIAN);
+                      Msg m = new Msg();
+                      m.cmd = b.getInt(); m.a0 = b.getInt(); m.a1 = b.getInt();
+                      int len = b.getInt();
+                      if (len < 0 || len > 4 * 1024 * 1024) throw new Exception("bad adb packet");
+                      m.data = new byte[len];
+                      in.readFully(m.data);
+                      return m;
+                  }
+                  void close() { try { s.close(); } catch (Exception ignored) {} }
+              }
+
+              static Conn connect(int authWaitMs) throws Exception {
+                  KeyPair kp = keys();
+                  Conn c = new Conn();
+                  c.s = new Socket();
+                  try { c.s.connect(new InetSocketAddress(host, port), 3000); }
+                  catch (Exception e) { throw new AdbEx(NO_CONN, "连不上 " + host + ":" + port + "（无线调试或 adb tcpip 5555 没开）"); }
+                  boolean sigSent = false, pubSent = false;
+                  try {
+                      c.s.setSoTimeout(10000);
+                      c.in = new DataInputStream(c.s.getInputStream());
+                      c.out = c.s.getOutputStream();
+                      c.send(CNXN, 0x01000001, 256 * 1024, "host::\0".getBytes("UTF-8"));
+                      while (true) {
+                          Msg m = c.read();
+                          if (m.cmd == CNXN) return c;
+                          if (m.cmd != AUTH || m.a0 != 1) continue;
+                          if (!sigSent) { sigSent = true; c.send(AUTH, 2, 0, sign(kp.getPrivate(), m.data)); }
+                          else if (!pubSent) { pubSent = true; c.send(AUTH, 3, 0, pubPayload((RSAPublicKey) kp.getPublic())); c.s.setSoTimeout(authWaitMs); }
+                          else throw new AdbEx(NO_AUTH, "调试授权被拒绝");
+                      }
+                  } catch (SocketTimeoutException e) {
+                      c.close();
+                      throw new AdbEx(NO_AUTH, pubSent ? "等待「允许 USB 调试」授权超时" : "adb 握手超时");
+                  } catch (AdbEx e) {
+                      c.close(); throw e;
+                  } catch (Exception e) {
+                      c.close();
+                      throw new AdbEx(pubSent ? NO_AUTH : NO_CONN, "adb 连接中断：" + e.getMessage());
+                  }
+              }
+
+              static String exec(Conn c, String cmd) throws Exception {
+                  int local = 7;
+                  c.s.setSoTimeout(180000);
+                  c.send(OPEN, local, 0, ("shell:" + cmd + "\0").getBytes("UTF-8"));
+                  ByteArrayOutputStream o = new ByteArrayOutputStream();
+                  while (true) {
+                      Msg m = c.read();
+                      if (m.cmd == WRTE) { o.write(m.data); c.send(OKAY, local, m.a0, null); }
+                      else if (m.cmd == CLSE) { c.send(CLSE, local, m.a0, null); break; }
+                  }
+                  return o.toString("UTF-8");
+              }
+
+              public static Result test(int authWaitMs) {
+                  Conn c = null;
+                  try {
+                      c = connect(authWaitMs);
+                      String out = exec(c, "id");
+                      if (out.contains("uid=")) return new Result(OK, "adb 通道可用（" + last(out) + "）", out);
+                      return new Result(FAIL, "shell 无响应", out);
+                  } catch (AdbEx e) { return new Result(e.code, e.getMessage(), null); }
+                  catch (Exception e) { return new Result(FAIL, "adb 出错：" + e, null); }
+                  finally { if (c != null) c.close(); }
+              }
+
+              public static Result install(String apk, int authWaitMs) {
+                  if (apk.indexOf('\'') >= 0) return new Result(FAIL, "APK 路径里有单引号", null);
+                  Conn c = null;
+                  try {
+                      c = connect(authWaitMs);
+                      String out = exec(c, "cp '" + apk + "' " + TMP + " && chmod 644 " + TMP + " && pm install -r " + TMP + " 2>&1; rm -f " + TMP).trim();
+                      if (out.contains("INSTALL_FAILED_VERSION_DOWNGRADE")) return new Result(DOWNGRADE, "版本不比已装的新", out);
+                      if (out.contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE")) return new Result(INCOMPAT, "签名不一致", out);
+                      if (out.contains("Success")) return new Result(OK, "安装成功", out);
+                      return new Result(FAIL, out.length() == 0 ? "安装没有输出" : last(out), out);
+                  } catch (AdbEx e) { return new Result(e.code, e.getMessage(), null); }
+                  catch (Exception e) { return new Result(FAIL, "adb 出错：" + e, null); }
+                  finally { if (c != null) c.close(); }
+              }
+
+              static String last(String t) {
+                  String[] ls = t.trim().split("\n");
+                  String s = ls[ls.length - 1].trim();
+                  return s.length() > 200 ? s.substring(0, 200) : s;
+              }
+
+              static byte[] sign(PrivateKey k, byte[] token) throws Exception {
+                  byte[] d = new byte[SHA1_DI.length + token.length];
+                  System.arraycopy(SHA1_DI, 0, d, 0, SHA1_DI.length);
+                  System.arraycopy(token, 0, d, SHA1_DI.length, token.length);
+                  Cipher c = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+                  c.init(Cipher.ENCRYPT_MODE, k);
+                  return c.doFinal(d);
+              }
+
+              static byte[] pubPayload(RSAPublicKey k) throws Exception {
+                  BigInteger n = k.getModulus();
+                  BigInteger r32 = BigInteger.ONE.shiftLeft(32);
+                  BigInteger n0inv = r32.subtract(n.mod(r32).modInverse(r32));
+                  BigInteger rr = BigInteger.ONE.shiftLeft(4096).mod(n);
+                  ByteBuffer b = ByteBuffer.allocate(524).order(ByteOrder.LITTLE_ENDIAN);
+                  b.putInt(64); b.putInt(n0inv.intValue());
+                  b.put(le(n, 256)); b.put(le(rr, 256));
+                  b.putInt(k.getPublicExponent().intValue());
+                  String s = Base64.encodeToString(b.array(), Base64.NO_WRAP) + " vtn@build-helper\0";
+                  return s.getBytes("UTF-8");
+              }
+
+              static byte[] le(BigInteger x, int len) {
+                  byte[] be = x.toByteArray(), r = new byte[len];
+                  for (int i = 0; i < len && i < be.length; i++) r[i] = be[be.length - 1 - i];
+                  return r;
+              }
+
+              static synchronized KeyPair keys() throws Exception {
+                  File pv = new File(keyDir, "adbkey.pk8"), pb = new File(keyDir, "adbkey.x509");
+                  KeyFactory kf = KeyFactory.getInstance("RSA");
+                  if (pv.exists() && pb.exists()) {
+                      try {
+                          return new KeyPair(kf.generatePublic(new X509EncodedKeySpec(readAll(pb))), kf.generatePrivate(new PKCS8EncodedKeySpec(readAll(pv))));
+                      } catch (Exception ignored) {}
+                  }
+                  KeyPairGenerator g = KeyPairGenerator.getInstance("RSA");
+                  g.initialize(2048);
+                  KeyPair kp = g.generateKeyPair();
+                  writeAll(pv, kp.getPrivate().getEncoded());
+                  writeAll(pb, kp.getPublic().getEncoded());
+                  return kp;
+              }
+
+              static byte[] readAll(File f) throws Exception {
+                  FileInputStream in = new FileInputStream(f);
+                  try {
+                      ByteArrayOutputStream o = new ByteArrayOutputStream();
+                      byte[] buf = new byte[4096]; int n;
+                      while ((n = in.read(buf)) > 0) o.write(buf, 0, n);
+                      return o.toByteArray();
+                  } finally { in.close(); }
+              }
+
+              static void writeAll(File f, byte[] d) throws Exception {
+                  FileOutputStream o = new FileOutputStream(f);
+                  try { o.write(d); } finally { o.close(); }
+              }
+          }
+          EOF_D
           mkdir -p "$(dirname 'app/src/main/assets/index.html')"
           cat > 'app/src/main/assets/index.html' <<'EOF_H'
           <!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
@@ -901,6 +1173,11 @@ jobs:
           <label class="chk"><input id="quick" type="checkbox">打开 App 时，若 build.yml 是 <input id="qs" type="number" style="width:64px;display:inline-block;padding:4px 6px"> 秒内刚下载的，自动上传并编译</label>
           <label class="chk"><input id="dry" type="checkbox">试运行（只检查，不提交）</label>
           <button class="main" onclick="saveOpt()">保存设置</button></div>
+          <div class="c"><h2>静默安装</h2>
+          <label class="chk"><input id="silent" type="checkbox" onchange="saveOpt()">下载后通过 adb 通道静默安装（不弹确认窗，失败自动改走 DSH GO）</label>
+          <div class="kv"><span>adb 通道（127.0.0.1:5555）</span><span id="adbv">未检查</span></div>
+          <div class="row"><button onclick="adbCheck()">检查 adb 通道</button></div>
+          <div class="m" style="margin-top:10px">需先开无线调试并执行 adb tcpip 5555。首次检查会弹「允许 USB 调试」，请勾「始终允许」。5555 是明文通道，不用时建议关闭。</div></div>
           </div></div>
           </div>
           <script>
@@ -929,8 +1206,8 @@ jobs:
           function showTok(){const t=LS.getItem("vtn_tok");$("tokpill").innerHTML=t?'<span class="pill ok">已授权</span>':'<span class="pill no">未设置 token</span>'}
           function saveTok(){const t=$("tok").value.trim();if(!t)return App.toast("先粘贴 token");LS.setItem("vtn_tok",t);$("tok").value="";showTok();App.toast("已保存")}
           function opt(){return JSON.parse(LS.getItem("vtn_opt")||"{}")}
-          function loadOpt(){const o=opt();for(const k in DEF)$(k).value=o[k]||DEF[k];$("auto").checked=o.auto!==false;$("quick").checked=o.quick!==false;$("qs").value=o.qs||30}
-          function saveOpt(){const o=opt();for(const k in DEF)o[k]=$(k).value.trim();o.auto=$("auto").checked;o.quick=$("quick").checked;o.qs=+$("qs").value||30;LS.setItem("vtn_opt",JSON.stringify(o));App.toast("已保存")}
+          function loadOpt(){const o=opt();for(const k in DEF)$(k).value=o[k]||DEF[k];$("auto").checked=o.auto!==false;$("quick").checked=o.quick!==false;$("qs").value=o.qs||30;$("silent").checked=o.silent!==false}
+          function saveOpt(){const o=opt();for(const k in DEF)o[k]=$(k).value.trim();o.auto=$("auto").checked;o.quick=$("quick").checked;o.qs=+$("qs").value||30;o.silent=$("silent").checked;LS.setItem("vtn_opt",JSON.stringify(o));App.toast("已保存")}
           function dshPkg(){return opt().dsh||""}
           function loadApps(){apps=JSON.parse(App.listApps()).sort((a,b)=>a.name.localeCompare(b.name,"zh"));
            let cur=dshPkg();if(!cur){const h=apps.find(a=>/dsh/i.test(a.name)||/dsh/i.test(a.pkg));if(h){cur=h.pkg;const o=opt();o.dsh=cur;LS.setItem("vtn_opt",JSON.stringify(o))}}
@@ -968,10 +1245,13 @@ jobs:
            if(t=="btn"){btn(m,()=>act(downloadLatest),true);return}
            if(t=="lv"){$("lv").textContent=m;return}
            if(t=="dl"){$("dv").textContent=m.split("/").pop();bar(null);btn("打开 DSH GO",()=>openDsh(true),true);showInst();return}
+           if(t=="inst"){[...$("links").children].forEach(b=>{if(b.textContent=="打开 DSH GO")b.remove()});btn("打开视频笔记",()=>App.openApp($("pkg").value.trim()),true);showInst();App.toast("已静默安装："+m);return}
+           if(t=="adb"){const r=JSON.parse(m);$("adbv").innerHTML=r.ok?'<span class="pill ok">可用</span>':'<span class="pill no">不可用</span>';say(r.msg,r.ok?"g":"y");App.toast(r.msg);return}
            if(t=="done"){busy=false;$("go").disabled=false;bg();return}
            say(m,t=="e"?"r":t=="w"?"y":t=="g"?"g":"d");if(t=="e")st("出错了",m)};
+          function adbCheck(){$("adbv").textContent="检查中…（如有弹窗请允许）";App.adbTest()}
           function bg(){try{$("popv").innerHTML=App.canPop()?'<span class="pill ok">已开启</span>':'<span class="pill no">未开启</span>';$("batv").innerHTML=App.batOk()?'<span class="pill ok">是</span>':'<span class="pill no">否</span>'}catch(e){}}
-          function svcStart(o){if(!App.startWatch(JSON.stringify({tok:LS.getItem("vtn_tok")||"",repo:repo(),sha:o.sha||"",pkg:$("pkg").value.trim(),dsh:dshPkg(),to:+$("to").value||25,auto:!!o.auto,only:!!o.only})))throw new Fail("后台任务已在运行，或启动失败");
+          function svcStart(o){if(!App.startWatch(JSON.stringify({tok:LS.getItem("vtn_tok")||"",repo:repo(),sha:o.sha||"",pkg:$("pkg").value.trim(),dsh:dshPkg(),to:+$("to").value||25,auto:!!o.auto,only:!!o.only,silent:$("silent").checked})))throw new Fail("后台任务已在运行，或启动失败");
            say("已交给后台服务，可以离开本 App","d");if(!App.canPop())say("没开「显示在其他应用上层」，完成时只发通知，点通知进入 DSH GO（设置页可开启）","y")}
           async function downloadLatest(){if(!App.hasAccess()){App.requestAccess();throw new Fail("需要文件权限才能保存 APK")}
            step(2);st("下载中","已交给后台，可以切到别的 App");svcStart({auto:true,only:true})}
