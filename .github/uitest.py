@@ -19,7 +19,7 @@ for _ in range(30):
 A('forward','tcp:9222','localabstract:'+names[-1])
 pages=json.load(urllib.request.urlopen('http://127.0.0.1:9222/json'))
 pg=[p for p in pages if 'index.html' in p.get('url','')][0]
-ws=websocket.create_connection(pg['webSocketDebuggerUrl'],timeout=120)
+ws=websocket.create_connection(pg['webSocketDebuggerUrl'],timeout=120,suppress_origin=True)
 I=[0]
 def send(m,**p):
     I[0]+=1; ws.send(json.dumps({'id':I[0],'method':m,'params':p}))
