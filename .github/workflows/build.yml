@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 85
-                  versionName "2.6.7"
+                  versionCode 86
+                  versionName "2.6.8"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -3953,8 +3953,9 @@ jobs:
             };
           })();
           // ===== v1.6.2：版本号、更新日志、一键复制反馈 =====
-          const APP_VER = "2.6.7";
+          const APP_VER = "2.6.8";
           const CHANGELOG = [
+            ["2.6.8", "修复导出 PDF 内容缩在左上角：打印时只保留导出内容，侧栏留白、页面宽度等界面样式一律不参与排版"],
             ["2.6.7", "修复导出 PDF 后点“打开”跳到文件管理的“保存至”界面：改为只找真正能阅读 PDF 的应用（优先荣耀文档），找不到就弹出应用选择"],
             ["2.6.6", "代码整理第 2 部分：弹窗按钮的样式从 3 处合并为 1 处，外观和功能不变"],
             ["2.6.5", "代码整理第 1 部分：删除侧栏里已被覆盖、不再生效的样式，外观和功能不变"],
@@ -5852,7 +5853,7 @@ jobs:
           })();
           iconFallback();
           </script>
-          <style>.nav{z-index:5000!important;pointer-events:auto!important}.nav button{pointer-events:auto!important;position:relative;z-index:1}@media (min-width:841px){#pg-det{left:256px!important}}</style>
+          <style>.nav{z-index:5000!important;pointer-events:auto!important}.nav button{pointer-events:auto!important;position:relative;z-index:1}@media (min-width:841px){#pg-det{left:256px!important}}@media print{html,body{width:auto!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important;overflow:visible!important;zoom:1!important;transform:none!important}body>*:not(#v5print){display:none!important}#v5print{display:block!important;position:static!important;left:auto!important;width:auto!important;max-width:none!important;margin:0!important;padding:0!important;transform:none!important;zoom:1!important}}</style>
           <script>
           // v2.6.3：侧栏导航兜底——不依赖主脚本，点了就切页
           (function(){function go(p){if(!p)return;try{if(typeof tab==="function"){tab(p);return}}catch(e){}
