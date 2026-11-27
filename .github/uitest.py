@@ -133,6 +133,7 @@ _md='# 配图测试\n\n光合作用分为光反应和暗反应两个阶段。\n\
 ev('(function(){var it={title:"配图测试",bvid:"BVai",p:1,md:'+json.dumps(_md,ensure_ascii=False)+',srt:"",kind:"note",time:Date.now(),tag:"生物",imgs:["uit_shot.jpg"]};var h=loadHist();h.unshift(it);Store.set("vtn_hist",JSON.stringify(h));show(it);Store.set("vtn_aifig",JSON.stringify({base:"http://127.0.0.1:8790",key:"testkey"}));return 1})()'); time.sleep(3)
 AIR['入口']=ev('JSON.stringify({btn:!!document.getElementById("aiFigBtn"),bar:!!document.querySelector("#preview .aiBar"),row:!!document.getElementById("aiRow")})')
 shot('09_配图_出图前')
+ev('vchat=async function(){return "第1行：光合作用 = 光反应 + 暗反应\\n红框：框住第1行"};1')
 AIR['出图张数']=ev('__aiFig.genAll({auto:true})'); time.sleep(3)
 _q='JSON.stringify({src:(document.querySelector("#preview figure.shot img")||{}).src||"",w:(document.querySelector("#preview figure.shot img")||{}).naturalWidth||0,on:((document.querySelector("#preview .aiBar .on")||{}).textContent||""),saved:loadHist()[0].md.indexOf("img/ai_")>=0,pdf:render(curMd()).indexOf("img/ai_")>=0})'
 AIR['换成配图']=ev(_q); shot('09_配图_GPAI配图')
@@ -192,7 +193,7 @@ def _aj(k):
     try: return json.loads(AIR.get(k) or '{}')
     except Exception: return {}
 chk('GPAI 配图入口（工具栏按钮、图下切换条、设置项）',_aj('入口')=={'btn':True,'bar':True,'row':True})
-chk('GPAI 配图：请求带密钥、生物用 diagram、提示词含上下文',bool(AIR.get('请求')) and AIR['请求'][0][2]=='testkey' and AIR['请求'][0][3].get('engine')=='diagram' and '光合作用' in AIR['请求'][0][3].get('prompt',''))
+chk('GPAI 配图：先转写原截图再严格照原文重画（带密钥）',bool(AIR.get('请求')) and AIR['请求'][0][2]=='testkey' and AIR['请求'][0][3].get('engine')=='illust' and '光合作用 = 光反应 + 暗反应' in AIR['请求'][0][3].get('prompt','') and '逐行照抄' in AIR['请求'][0][3].get('prompt',''))
 chk('GPAI 配图：生成 1 张并显示、已保存、导出也用它',AIR.get('出图张数')==1 and 'ai_' in _aj('换成配图').get('src','') and _aj('换成配图').get('w',0)>0 and _aj('换成配图').get('saved') is True and _aj('换成配图').get('pdf') is True and _aj('换成配图').get('on')=='GPAI 配图')
 chk('GPAI 配图：可切回原截图',_aj('切回原截图').get('src','').endswith('uit_shot.jpg') and _aj('切回原截图').get('w',0)>0 and _aj('切回原截图').get('saved') is False and _aj('切回原截图').get('on')=='原截图')
 chk('GPAI 配图：可再切回配图',('ai_' in _aj('再切配图').get('src','')) and _aj('再切配图').get('saved') is True)

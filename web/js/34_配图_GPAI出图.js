@@ -1,7 +1,7 @@
 // ===== v2.8.6：GPAI 配图（每张截图都可在“原截图”和“GPAI 配图”之间自由切换）=====
 (function () {
   const K = "vtn_aifig";
-  const cfg = () => Store.json(K, {});
+  const cfg = () => Object.assign({ base: "https://magicbookx16pro.taile4dd80.ts.net", key: "gpai_f8b623dc780a22582d1780787f791cae" }, Store.json(K, {}));
   const st = document.createElement("style");
   st.textContent = ".aiBar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:-4px 0 12px;font-size:13px}.aiBar button{border:1px solid var(--outline-variant,#ccc);background:transparent;color:inherit;border-radius:14px;padding:3px 12px;font-size:13px}.aiBar button.on{background:var(--primary,#1a73e8);color:var(--on-primary,#fff);border-color:transparent}.aiBar button:disabled{opacity:.4}.aiBar .mute{opacity:.7}.aiIn{width:100%;box-sizing:border-box;margin:6px 0 10px;padding:8px;border-radius:8px;border:1px solid #ccc;font-size:14px}";
   document.head.appendChild(st);
@@ -27,9 +27,23 @@
       return JSON.parse(r.body);
     }
   }
+  // v2.8.7：先用识图模型把原截图逐字转写，再让 GPAI 严格照原文重画（实测内容与原图一致）
+  const TRP = "请把这张课堂截图（板书或 PPT）里的内容逐行、逐字转写出来，用于原样重画。要求：1）按从上到下、从左到右的顺序，每行写成“第N行：……”；2）公式照写，可用 LaTeX；3）最后用一两句话说明红框、圈注、箭头、下划线分别标在哪几行；4）只转写图中实际有的内容，不要解题、不要补充、不要解释。看不清的字写成[?]。";
+  async function transcribe(it, orig) {
+    it.aiTr = it.aiTr || {}; if (it.aiTr[orig]) return it.aiTr[orig];
+    if (!HAS_NATIVE || typeof vchat !== "function") return "";
+    const b = Native.readB64(orig); if (!b) return "";
+    const t = String(await vchat([{ type: "text", text: TRP }, { type: "image_url", image_url: { url: "data:image/jpeg;base64," + b } }]) || "").trim();
+    if (t.length > 8) it.aiTr[orig] = t;
+    return t;
+  }
   async function genOne(it, orig, alt, onStep) {
-    const prompt = "为高中学习笔记画一张清晰的图解，白底，中文标注，结构清楚，适合放进学习笔记。笔记：" + it.title + "。这张图要表达：" + (alt || "本节要点") + "。相关内容：" + ctxOf(it.md, orig);
-    let j = await api("POST", "/img/jobs", { prompt: prompt, engine: engineFor(it) });
+    let tr = ""; if (onStep) onStep("读取原截图");
+    try { tr = await transcribe(it, orig); } catch (e) { __err(e, "配图转写"); }
+    const prompt = tr
+      ? "把下面这张课堂板书原样重绘成整洁的学习笔记图。严格要求：只能使用下列原文，逐行照抄，行的顺序和分行保持不变；不得增加任何推导、公式、例子或解释，不得删改任何字；保留红框、圈注和箭头的位置。白底，黑色文字，红色只用于原有的框和圈，排版清晰。\n原文：\n" + tr.slice(0, 1800)
+      : "为高中学习笔记画一张清晰的图解，白底，中文标注，结构清楚，适合放进学习笔记。笔记：" + it.title + "。这张图要表达：" + (alt || "本节要点") + "。相关内容：" + ctxOf(it.md, orig);
+    let j = await api("POST", "/img/jobs", { prompt: prompt, engine: tr ? "illust" : engineFor(it) });
     const id = j.variant_id; const url = j.status_url || ("/img/jobs/" + id);
     for (let n = 0; j.status !== "completed"; n++) {
       if (j.status === "failed") throw new Error("出图失败：" + (j.error || ""));
@@ -100,7 +114,7 @@
   }
   function menu() {
     const m = document.createElement("div"); m.className = "vDlgM";
-    m.innerHTML = '<div class="vDlg"><div class="tt">GPAI 配图</div><div class="mm">为笔记里的视频截图生成图解。原截图一直保留：每张图下面可以单独切换，也可以在这里一键切换。导出 PDF 和图文 MD 用的是当前选中的那一种。</div><div class="bb" style="flex-wrap:wrap"><button data-r="g">为全部截图出图</button><button data-r="a">全部用 GPAI 配图</button><button data-r="o">全部用原截图</button><button data-r="s">服务设置</button><button data-r="x">关闭</button></div></div>';
+    m.innerHTML = '<div class="vDlg"><div class="tt">GPAI 配图</div><div class="mm">先读出每张截图里的文字和公式，再由 GPAI 照原文重画成白底清晰版，内容与原截图一致。原截图一直保留：每张图下面可以单独切换，也可以在这里一键切换。导出 PDF 和图文 MD 用的是当前选中的那一种。</div><div class="bb" style="flex-wrap:wrap"><button data-r="g">为全部截图出图</button><button data-r="a">全部用 GPAI 配图</button><button data-r="o">全部用原截图</button><button data-r="s">服务设置</button><button data-r="x">关闭</button></div></div>';
     m.onclick = e => { const b = e.target.closest("button"); if (!b && e.target !== m) return; m.remove(); const r = b && b.dataset.r; if (r === "g") genAll(); if (r === "a") useAll("a"); if (r === "o") useAll("o"); if (r === "s") setDlg(); };
     document.body.appendChild(m);
   }
