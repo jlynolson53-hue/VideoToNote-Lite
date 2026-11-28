@@ -116,7 +116,7 @@ class _H(http.server.BaseHTTPRequestHandler):
         if s.path=='/v1/models': return s._j({'object':'list','data':[{'id':i} for i in ['gpai-fast','gemini-4-neon','claude-opus-5.5','gpt-6.1-sol']]})
         s._j({},404)
     def do_POST(s):
-        n=int(s.headers.get('Content-Length') or 0); body=json.loads(s.rfile.read(n) or b'{}'); SEEN.append(['POST',s.path,s.headers.get('Authorization'),body.get('model')])
+        n=int(s.headers.get('Content-Length') or 0); body=json.loads(s.rfile.read(n) or b'{}'); SEEN.append(['POST',s.path,s.headers.get('Authorization'),body.get('model'),body.get('messages')])
         s._j({'choices':[{'index':0,'message':{'role':'assistant','content':'笔记内容OK'},'finish_reason':'stop'}]})
 _srv=http.server.ThreadingHTTPServer(('127.0.0.1',8790),_H); threading.Thread(target=_srv.serve_forever,daemon=True).start()
 A('reverse','tcp:8790','tcp:8790')
@@ -161,6 +161,16 @@ MT['编辑旧笔记不误标']=ev('(function(){S.model="gpai-fast";var h=loadHis
 MT['旧笔记不显示']=ev('(function(){var h=loadHist().find(function(x){return !x.model});if(!h)return true;show(h);return document.getElementById("modelTag").style.display==="none"})()')
 ev('(function(){var h=loadHist().filter(function(x){return x.bvid!=="BVmt"});Store.set("vtn_hist",JSON.stringify(h));S.base="https://api.deepseek.com";S.model="deepseek-flash";Store.set("vtn_set",JSON.stringify(S));return 1})()')
 LOG.append('MT '+json.dumps(MT,ensure_ascii=False))
+# ===== v2.9.2：GPAI 规则并入 user 消息 =====
+SM={}
+SM['GPAI']=ev('(async function(){S.base="http://127.0.0.1:8790/gpai/v1".replace("/gpai","");S.base="http://gpai.127.0.0.1.nip.io:8790/v1";return 1})()')
+SM['合并']=ev('JSON.stringify(__gpMerge([{role:"system",content:"规则：写【图N】"},{role:"user",content:"字幕内容"}]))')
+SM['合并图片']=ev('JSON.stringify(__gpMerge([{role:"system",content:"规则"},{role:"user",content:[{type:"image_url",image_url:{url:"data:x"}}]}]))')
+SM['真实请求']=ev('(async function(){S.base="http://127.0.0.1:8790/v1";S.key="testkey";S.model="gpai-fast";var o=chat;window.__isGpOverride=1;var r=await (function(){var b=S.base;S.base="http://127.0.0.1:8790/v1#gpai";return chat([{role:"system",content:"规则：写【图N】"},{role:"user",content:"字幕"}]).finally(function(){S.base=b})})();return r})()')
+SM['DS不变']=ev('(async function(){S.base="http://127.0.0.1:8790/v1";await chat([{role:"system",content:"规则DS"},{role:"user",content:"字幕"}]);return 1})()')
+SM['请求']=[x[4] for x in SEEN if x[0]=='POST'][-2:]
+ev('(function(){S.base="https://api.deepseek.com";S.model="deepseek-flash";S.key="";Store.set("vtn_set",JSON.stringify(S));return 1})()')
+LOG.append('SM '+json.dumps(SM,ensure_ascii=False)[:1500])
 A('pull','/sdcard/Download/VideoToNote/','out/pdf/')
 A('shell','settings','put','system','user_rotation','1'); time.sleep(5)
 ev('(function(){try{closeDet()}catch(e){};tab("gen");return 1})()'); time.sleep(2); state('port_gen'); shot('08_竖屏_生成')
@@ -234,6 +244,14 @@ chk('笔记里显示“由 Claude Opus 5.5 生成”',MT.get('显示')=='由 Cla
 chk('导出 PDF 不显示模型',MT.get('PDF不含') is True)
 chk('编辑保存旧笔记不会被误标成当前模型',MT.get('编辑旧笔记不误标') is True)
 chk('没记录模型的旧笔记不显示标签',MT.get('旧笔记不显示') is True)
+def _sm(k):
+    try: return json.loads(SM.get(k) or 'null')
+    except Exception: return None
+chk('GPAI：system 规则并入 user 消息',_sm('合并')==[{'role':'user','content':'【任务规则，必须严格遵守】\n规则：写【图N】\n\n【以下是任务内容】\n字幕内容'}])
+chk('GPAI：带图片的识图消息也能合并',(_sm('合并图片') or [{}])[0].get('content',[{}])[0].get('text','').startswith('【任务规则') and len(_sm('合并图片')[0]['content'])==2)
+_rq=SM.get('请求') or [None,None]
+chk('发给 GPAI 的真实请求里没有 system 消息',bool(_rq[0]) and all(m.get('role')!='system' for m in _rq[0]) and '写【图N】' in json.dumps(_rq[0],ensure_ascii=False))
+chk('DeepSeek 请求保持原样（仍用 system）',bool(_rq[1]) and _rq[1][0].get('role')=='system')
 chk('没有脚本执行错误',not any(x.startswith('EVAL ERR') for x in LOG))
 ST['errlog']=ev('__errText()')
 json.dump({'state':ST,'log':LOG},open('out/result.json','w'),ensure_ascii=False,indent=1)
