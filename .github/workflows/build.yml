@@ -75,8 +75,8 @@ jobs:
                   applicationId "com.vtn.lite"
                   minSdk 24
                   targetSdk 34
-                  versionCode 101
-                  versionName "2.9.2"
+                  versionCode 102
+                  versionName "2.9.3"
                   ndk { abiFilters 'arm64-v8a' }
               }
               compileOptions {
@@ -99,7 +99,6 @@ jobs:
               <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
               <uses-permission android:name="android.permission.WAKE_LOCK" />
               <application
-                  android:usesCleartextTraffic="true"
                   android:label="FrameNote"
                   android:icon="@mipmap/ic_launcher"
                   android:roundIcon="@mipmap/ic_launcher"
@@ -1691,26 +1690,6 @@ jobs:
                             .setAutoCancel(true).setContentIntent(pi);
                           nm.notify(2, nb.build());
                       } catch (Exception ignored) { }
-                  }
-
-                  @JavascriptInterface
-                  public void imgFetch(final String id, final String url, final String name, final String headersJson) {
-                      new Thread(() -> {
-                          JSONObject r = new JSONObject();
-                          try {
-                              if (name == null || name.contains("/") || name.contains("..")) throw new Exception("bad name");
-                              HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-                              c.setConnectTimeout(20000); c.setReadTimeout(120000); c.setInstanceFollowRedirects(true);
-                              if (headersJson != null && headersJson.length() > 0) { JSONObject h = new JSONObject(headersJson); Iterator<String> it = h.keys(); while (it.hasNext()) { String k = it.next(); c.setRequestProperty(k, h.getString(k)); } }
-                              int code = c.getResponseCode(); if (code < 200 || code >= 300) throw new Exception("HTTP " + code);
-                              InputStream in = c.getInputStream(); File d = new File(getFilesDir(), "img"); d.mkdirs();
-                              FileOutputStream o = new FileOutputStream(new File(d, name)); byte[] b = new byte[65536]; int n; long t = 0;
-                              while ((n = in.read(b)) > 0) { o.write(b, 0, n); t += n; } o.close(); in.close();
-                              r.put("ok", true); r.put("size", t);
-                          } catch (Throwable e) { try { r.put("error", String.valueOf(e)); } catch (Exception x) { r = new JSONObject(); } }
-                          final String js = "window.__nativeCb(" + JSONObject.quote(id) + "," + JSONObject.quote(r.toString()) + ")";
-                          runOnUiThread(() -> web.evaluateJavascript(js, null));
-                      }).start();
                   }
 
                   @JavascriptInterface

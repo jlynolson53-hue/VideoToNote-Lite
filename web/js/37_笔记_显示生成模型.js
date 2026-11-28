@@ -1,10 +1,9 @@
 // ===== v2.9.1：记录并显示笔记是用哪个模型写的（只在 App 里显示，导出 PDF/MD 不带）=====
 (function () {
-  const NM = { "gpai-fast": "GPAI Fast", "gemini-4-neon": "Gemini 4 Neon", "claude-opus-5.5": "Claude Opus 5.5", "gpt-6.1-sol": "GPT-6.1 Sol" };
-  const nice = m => NM[m] || (/deepseek/i.test(m) ? "DeepSeek · " + m : m);
+  const nice = m => /deepseek/i.test(m) ? "DeepSeek · " + m : m;
   const _save = saveHist;
   saveHist = function (item) {
-    if (item && window.__busy && !item.model) { item.model = S.model; item.prov = /ts\.net|gpai/i.test(S.base) ? "GPAI" : "DeepSeek"; }
+    if (item && window.__busy && !item.model) { item.model = S.model; }
     return _save.apply(this, arguments);
   };
   const st = document.createElement("style");

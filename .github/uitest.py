@@ -104,46 +104,6 @@ for j in range(NOTE_N):
             if A('shell','ls','/sdcard/Download/VideoToNote/')!=before: break
         time.sleep(4); shot('07_导出完成_col'+col)
         ev('document.querySelectorAll(".vDlgM").forEach(x=>x.remove());1')
-# ===== v2.8.8：GPAI 写笔记 + 模型选择（本机模拟 OpenAI 兼容接口）=====
-import threading,http.server
-SEEN=[]; GP={}
-class _H(http.server.BaseHTTPRequestHandler):
-    def log_message(s,*a): pass
-    def _j(s,o,c=200):
-        b=json.dumps(o,ensure_ascii=False).encode(); s.send_response(c); s.send_header('Content-Type','application/json'); s.send_header('Content-Length',str(len(b))); s.end_headers(); s.wfile.write(b)
-    def do_GET(s):
-        SEEN.append(['GET',s.path,s.headers.get('Authorization')])
-        if s.path=='/v1/models': return s._j({'object':'list','data':[{'id':i} for i in ['gpai-fast','gemini-4-neon','claude-opus-5.5','gpt-6.1-sol']]})
-        s._j({},404)
-    def do_POST(s):
-        n=int(s.headers.get('Content-Length') or 0); body=json.loads(s.rfile.read(n) or b'{}'); SEEN.append(['POST',s.path,s.headers.get('Authorization'),body.get('model'),body.get('messages')])
-        s._j({'choices':[{'index':0,'message':{'role':'assistant','content':'笔记内容OK'},'finish_reason':'stop'}]})
-_srv=http.server.ThreadingHTTPServer(('127.0.0.1',8790),_H); threading.Thread(target=_srv.serve_forever,daemon=True).start()
-A('reverse','tcp:8790','tcp:8790')
-GP['入口']=ev('JSON.stringify({use:!!document.getElementById("useGpai"),ref:!!document.getElementById("refModels"),sel:!!document.getElementById("modelSel")})')
-GP['一键']=ev('(function(){document.getElementById("useGpai").click();return JSON.stringify({base:S.base,model:S.model,key:!!S.key})})()')
-time.sleep(1)
-GP['模型数']=ev('(async function(){document.getElementById("base").value="http://127.0.0.1:8790/v1";document.getElementById("key").value="testkey";var ids=await __gpaiNote.loadModels();return ids.length})()')
-GP['选模型']=ev('(function(){var s=__gpaiNote.sel;s.value="claude-opus-5.5";s.dispatchEvent(new Event("change"));return JSON.stringify({model:S.model,saved:JSON.parse(localStorage.getItem("vtn_set")).model,shown:s.style.display!=="none"})})()')
-GP['写笔记']=ev('(async function(){var r=await chat([{role:"user",content:"测试"}]);return typeof r==="string"?r:JSON.stringify(r)})()')
-GP['请求']=[x for x in SEEN if x[0]=='POST'][-1:] 
-GP['旧出图已删']=ev('JSON.stringify({fig:!!document.getElementById("aiFigBtn"),row:!!document.getElementById("aiRow"),api:typeof window.__aiFig})')
-nav_tab=ev('(function(){try{tab("set")}catch(e){};return 1})()'); time.sleep(2); shot('09_设置_GPAI模型选择')
-ev('(function(){S.base="https://api.deepseek.com";S.model="deepseek-flash";S.key="";Store.set("vtn_set",JSON.stringify(S));return 1})()')
-LOG.append('GP '+json.dumps(GP,ensure_ascii=False)[:1500])
-# ===== v2.8.9：两套配置记忆 + 生成页模型快切 =====
-PV={}
-PV['入口']=ev('JSON.stringify({seg:!!document.getElementById("provSeg"),chips:document.querySelectorAll("#modelChips button").length})')
-PV['填DS']=ev('(function(){__prov.apply("ds",null,true);document.getElementById("base").value="https://api.deepseek.com";document.getElementById("key").value="dskey";document.getElementById("model").value="deepseek-flash";document.getElementById("saveSet").click();return 1})()'); time.sleep(1)
-PV['切GPAI']=ev('(function(){document.querySelector("#provSeg [data-p=gp]").click();return JSON.stringify({base:S.base,key:S.key})})()')
-PV['切回DS']=ev('(function(){document.querySelector("#provSeg [data-p=ds]").click();return JSON.stringify({base:S.base,key:S.key,model:S.model})})()')
-ev('(function(){tab("gen");return 1})()'); time.sleep(2)
-PV['芯片Claude']=ev('(function(){document.querySelector("#modelChips [data-m=\'claude-opus-5.5\']").click();return JSON.stringify({base:S.base,model:S.model,on:(document.querySelector("#modelChips .on")||{}).textContent})})()')
-shot('10_生成页_模型快切')
-PV['芯片DS']=ev('(function(){document.querySelector("#modelChips [data-p=ds]").click();return JSON.stringify({base:S.base,key:S.key,saved:JSON.parse(localStorage.getItem("vtn_set")).key})})()')
-PV['GPAI仍记得Claude']=ev('JSON.parse(localStorage.getItem("vtn_prov")).gp.model')
-ev('(function(){localStorage.removeItem("vtn_prov");S.base="https://api.deepseek.com";S.model="deepseek-flash";S.key="";Store.set("vtn_set",JSON.stringify(S));return 1})()')
-LOG.append('PV '+json.dumps(PV,ensure_ascii=False)[:1500])
 # ===== v2.9.0：取消生成 =====
 CX={}
 CX['按钮']=ev('!!document.getElementById("pvCancel")')
@@ -153,24 +113,14 @@ CX['重新开始可用']=ev('(function(){pvReset();return JSON.stringify({c:PV.c
 LOG.append('CX '+json.dumps(CX,ensure_ascii=False))
 # ===== v2.9.1：显示生成模型 =====
 MT={}
-MT['记录']=ev('(function(){S.model="claude-opus-5.5";S.base="https://magicbookx16pro.taile4dd80.ts.net/v1";window.__busy=true;var it={title:"模型标签测试",bvid:"BVmt",p:1,md:"# 模型标签测试\\n\\n正文一段。",srt:"",kind:"note",time:Date.now()};saveHist(it);window.__busy=false;var h=loadHist()[0];return JSON.stringify({m:h.model,p:h.prov})})()')
+MT['记录']=ev('(function(){S.model="deepseek-pro";S.base="https://api.deepseek.com";window.__busy=true;var it={title:"模型标签测试",bvid:"BVmt",p:1,md:"# 模型标签测试\\n\\n正文一段。",srt:"",kind:"note",time:Date.now()};saveHist(it);window.__busy=false;var h=loadHist()[0];return JSON.stringify({m:h.model,p:h.prov})})()')
 MT['显示']=ev('(function(){show(loadHist()[0]);var t=document.getElementById("modelTag");return t.style.display!=="none"?t.textContent:""})()')
 time.sleep(2); shot('11_笔记_显示生成模型')
-MT['PDF不含']=ev('(function(){var h=pdfHtml(curMd());return h.indexOf("Claude")<0&&h.indexOf("生成")<0||h.indexOf("由 Claude")<0})()')
-MT['编辑旧笔记不误标']=ev('(function(){S.model="gpai-fast";var h=loadHist().find(function(x){return x.bvid!=="BVmt"});var old=h.model;saveHist(h);return String(loadHist()[0].model)===String(old)})()')
+MT['PDF不含']=ev('(function(){var h=pdfHtml(curMd());return h.indexOf("由 DeepSeek")<0})()')
+MT['编辑旧笔记不误标']=ev('(function(){S.model="deepseek-flash";var h=loadHist().find(function(x){return x.bvid!=="BVmt"});var old=h.model;saveHist(h);return String(loadHist()[0].model)===String(old)})()')
 MT['旧笔记不显示']=ev('(function(){var h=loadHist().find(function(x){return !x.model});if(!h)return true;show(h);return document.getElementById("modelTag").style.display==="none"})()')
 ev('(function(){var h=loadHist().filter(function(x){return x.bvid!=="BVmt"});Store.set("vtn_hist",JSON.stringify(h));S.base="https://api.deepseek.com";S.model="deepseek-flash";Store.set("vtn_set",JSON.stringify(S));return 1})()')
 LOG.append('MT '+json.dumps(MT,ensure_ascii=False))
-# ===== v2.9.2：GPAI 规则并入 user 消息 =====
-SM={}
-SM['GPAI']=ev('(async function(){S.base="http://127.0.0.1:8790/gpai/v1".replace("/gpai","");S.base="http://gpai.127.0.0.1.nip.io:8790/v1";return 1})()')
-SM['合并']=ev('JSON.stringify(__gpMerge([{role:"system",content:"规则：写【图N】"},{role:"user",content:"字幕内容"}]))')
-SM['合并图片']=ev('JSON.stringify(__gpMerge([{role:"system",content:"规则"},{role:"user",content:[{type:"image_url",image_url:{url:"data:x"}}]}]))')
-SM['真实请求']=ev('(async function(){S.base="http://127.0.0.1:8790/v1";S.key="testkey";S.model="gpai-fast";var o=chat;window.__isGpOverride=1;var r=await (function(){var b=S.base;S.base="http://127.0.0.1:8790/v1#gpai";return chat([{role:"system",content:"规则：写【图N】"},{role:"user",content:"字幕"}]).finally(function(){S.base=b})})();return r})()')
-SM['DS不变']=ev('(async function(){S.base="http://127.0.0.1:8790/v1";await chat([{role:"system",content:"规则DS"},{role:"user",content:"字幕"}]);return 1})()')
-SM['请求']=[x[4] for x in SEEN if x[0]=='POST'][-2:]
-ev('(function(){S.base="https://api.deepseek.com";S.model="deepseek-flash";S.key="";Store.set("vtn_set",JSON.stringify(S));return 1})()')
-LOG.append('SM '+json.dumps(SM,ensure_ascii=False)[:1500])
 A('pull','/sdcard/Download/VideoToNote/','out/pdf/')
 A('shell','settings','put','system','user_rotation','1'); time.sleep(5)
 ev('(function(){try{closeDet()}catch(e){};tab("gen");return 1})()'); time.sleep(2); state('port_gen'); shot('08_竖屏_生成')
@@ -218,40 +168,16 @@ for _r,_,_fs in os.walk('out/pdf'):
             if _p: _iss.append((_i+1,_p)); _im.save('out/bad/'+_f[:-4]+'_p'+str(_i+1)+'.png')
         chk('PDF 不越界：'+_f+' '+(str(_iss) if _iss else ''),not _iss)
 chk('实时预览不越界 '+str(globals().get('PVBAD',[])),not globals().get('PVBAD',[]))
-def _gj(k):
-    try: return json.loads(GP.get(k) or '{}')
-    except Exception: return {}
-chk('GPAI 写笔记入口（一键使用、刷新模型、模型下拉框）',_gj('入口')=={'use':True,'ref':True,'sel':True})
-chk('一键使用 GPAI 填好地址、Key 和默认模型',_gj('一键').get('base','').endswith('ts.net/v1') and _gj('一键').get('key') is True and _gj('一键').get('model')=='gpai-fast')
-chk('能读到 4 个可选模型',GP.get('模型数')==4)
-chk('切换模型后立即保存',_gj('选模型')=={'model':'claude-opus-5.5','saved':'claude-opus-5.5','shown':True})
-chk('写笔记请求用了所选模型和 Bearer Key',bool(GP.get('请求')) and GP['请求'][0][1]=='/v1/chat/completions' and GP['请求'][0][2]=='Bearer testkey' and GP['请求'][0][3]=='claude-opus-5.5' and '笔记内容OK' in str(GP.get('写笔记')))
-chk('出图功能已移除',_gj('旧出图已删')=={'fig':False,'row':False,'api':'undefined'})
-def _pj(k):
-    try: return json.loads(PV.get(k) or '{}')
-    except Exception: return {}
-chk('设置页有 DeepSeek/GPAI 切换，生成页有 5 个模型芯片',_pj('入口')=={'seg':True,'chips':5})
-chk('切到 GPAI 用 GPAI 的地址和 Key',_pj('切GPAI').get('base','').endswith('ts.net/v1') and _pj('切GPAI').get('key','').startswith('gpai_'))
-chk('切回 DeepSeek 时地址和 Key 自动恢复',_pj('切回DS')=={'base':'https://api.deepseek.com','key':'dskey','model':'deepseek-flash'})
-chk('生成页点 Claude 立即生效并高亮',_pj('芯片Claude').get('model')=='claude-opus-5.5' and _pj('芯片Claude').get('base','').endswith('ts.net/v1') and _pj('芯片Claude').get('on')=='Claude Opus 5.5')
-chk('生成页点 DeepSeek 恢复 Key 并保存',_pj('芯片DS')=={'base':'https://api.deepseek.com','key':'dskey','saved':'dskey'} and PV.get('GPAI仍记得Claude')=='claude-opus-5.5')
 chk('生成进度卡片有取消按钮',CX.get('按钮') is True)
 chk('取消后不再发出请求',CX.get('取消后请求被拒')=='已取消生成')
 chk('暂停状态下取消也能立即退出',CX.get('暂停中取消也退出')=='已取消生成')
 chk('取消后再次生成恢复正常',CX.get('重新开始可用')=='{"c":false,"d":false}')
-chk('生成时记下所用模型',MT.get('记录')=='{"m":"claude-opus-5.5","p":"GPAI"}')
-chk('笔记里显示“由 Claude Opus 5.5 生成”',MT.get('显示')=='由 Claude Opus 5.5 生成')
+chk('生成时记下所用模型',MT.get('记录')=='{"m":"deepseek-pro"}')
+chk('笔记里显示“由 DeepSeek · deepseek-pro 生成”',MT.get('显示')=='由 DeepSeek · deepseek-pro 生成')
 chk('导出 PDF 不显示模型',MT.get('PDF不含') is True)
 chk('编辑保存旧笔记不会被误标成当前模型',MT.get('编辑旧笔记不误标') is True)
 chk('没记录模型的旧笔记不显示标签',MT.get('旧笔记不显示') is True)
-def _sm(k):
-    try: return json.loads(SM.get(k) or 'null')
-    except Exception: return None
-chk('GPAI：system 规则并入 user 消息',_sm('合并')==[{'role':'user','content':'【任务规则，必须严格遵守】\n规则：写【图N】\n\n【以下是任务内容】\n字幕内容'}])
-chk('GPAI：带图片的识图消息也能合并',(_sm('合并图片') or [{}])[0].get('content',[{}])[0].get('text','').startswith('【任务规则') and len(_sm('合并图片')[0]['content'])==2)
-_rq=SM.get('请求') or [None,None]
-chk('发给 GPAI 的真实请求里没有 system 消息',bool(_rq[0]) and all(m.get('role')!='system' for m in _rq[0]) and '写【图N】' in json.dumps(_rq[0],ensure_ascii=False))
-chk('DeepSeek 请求保持原样（仍用 system）',bool(_rq[1]) and _rq[1][0].get('role')=='system')
+chk('App 里已没有任何 GPAI 代码',ev('(function(){var t=Array.from(document.scripts).map(function(x){return x.textContent}).join("");return /gpai|ts\\.net|claude|gemini/i.test(t)||!!document.getElementById("modelChips")||!!document.getElementById("provSeg")||typeof window.__gpMerge!=="undefined"})()') is False)
 chk('没有脚本执行错误',not any(x.startswith('EVAL ERR') for x in LOG))
 ST['errlog']=ev('__errText()')
 json.dump({'state':ST,'log':LOG},open('out/result.json','w'),ensure_ascii=False,indent=1)
